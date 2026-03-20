@@ -8,12 +8,16 @@ HOOK_CMD="node ${DIST_ENTRY}"
 
 echo "=== claudemd-guard v2 installer ==="
 
-# 1. Build (skip if dist/ already exists)
-if [[ -f "$DIST_ENTRY" ]]; then
-  echo "[1/2] dist/ found, skipping build."
-else
+# 1. Install dependencies + build
+cd "$SCRIPT_DIR"
+
+if [[ ! -d "node_modules" ]]; then
+  echo "[1/2] Installing dependencies..."
+  npm install --production
+fi
+
+if [[ ! -f "$DIST_ENTRY" ]]; then
   echo "[1/2] Building..."
-  cd "$SCRIPT_DIR"
   npm install
   npm run build
 
@@ -21,6 +25,8 @@ else
     echo "ERROR: Build failed — ${DIST_ENTRY} not found"
     exit 1
   fi
+else
+  echo "[1/2] dist/ found, skipping build."
 fi
 
 # 2. Update settings.json

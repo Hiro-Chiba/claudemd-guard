@@ -44,7 +44,7 @@ Claude Code を再起動すれば有効になります。
 | `CLAUDEMD_GUARD_API_KEY` | — | Anthropic APIキー（設定時はAPI直接呼び出し） |
 | `CLAUDEMD_GUARD_COOLDOWN` | `0` | クールダウン秒数（0=毎回検証） |
 | `CLAUDEMD_GUARD_DISABLED` | `false` | 無効化フラグ |
-| `USE_SYSTEM_CLAUDE` | `false` | PATHのclaude使用（デフォルトは~/.claude/local/claude） |
+| `USE_SYSTEM_CLAUDE` | `false` | `true`でPATH上のclaudeを強制使用（デフォルトは~/.claude/local/claude → 存在しなければPATHにフォールバック） |
 
 ## How It Works
 

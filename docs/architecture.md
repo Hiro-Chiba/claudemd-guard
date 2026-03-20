@@ -36,7 +36,7 @@ Claude Code（block なら操作を中止、null なら続行）
 ## AI 検証
 
 ### モデルクライアント優先順位
-1. **Claude CLI（デフォルト）**: `~/.claude/local/claude` を子プロセスで実行。APIキー不要
+1. **Claude CLI（デフォルト）**: `~/.claude/local/claude` → 存在しなければPATH上の `claude` を子プロセスで実行。APIキー不要
 2. **Anthropic API**: `CLAUDEMD_GUARD_API_KEY` が設定されていれば直接API呼び出し
 
 ### システムプロンプト
@@ -57,7 +57,7 @@ Claude Code（block なら操作を中止、null なら続行）
 | `CLAUDEMD_GUARD_API_KEY` | — | Anthropic APIキー |
 | `CLAUDEMD_GUARD_COOLDOWN` | `0` | クールダウン秒数 |
 | `CLAUDEMD_GUARD_DISABLED` | `false` | 無効化フラグ |
-| `USE_SYSTEM_CLAUDE` | `false` | PATHのclaude使用 |
+| `USE_SYSTEM_CLAUDE` | `false` | `true`でPATH上のclaudeを強制使用（デフォルトは~/.claude/local/claude → PATHフォールバック） |
 
 ## インストール構成
 
