@@ -12,10 +12,12 @@ const Config_1 = require("../config/Config");
 const ClaudeCli_1 = require("../validation/models/ClaudeCli");
 const AnthropicApi_1 = require("../validation/models/AnthropicApi");
 const PASS = { decision: undefined, reason: '' };
+const HOOK_EVENT_PRE_TOOL_USE = 'PreToolUse';
+const COOLDOWN_DIR_NAME = 'claudemd-guard';
 class FileCooldownStore {
     dir;
     constructor() {
-        this.dir = (0, path_1.join)((0, os_1.tmpdir)(), 'claudemd-guard');
+        this.dir = (0, path_1.join)((0, os_1.tmpdir)(), COOLDOWN_DIR_NAME);
         (0, fs_1.mkdirSync)(this.dir, { recursive: true });
     }
     stampPath(key) {
@@ -52,7 +54,7 @@ async function processHookData(input, deps) {
     }
     const hookData = parseResult.data;
     // Only process PreToolUse events
-    if (hookData.hook_event_name !== 'PreToolUse') {
+    if (hookData.hook_event_name !== HOOK_EVENT_PRE_TOOL_USE) {
         return PASS;
     }
     const toolName = hookData.tool_name;
@@ -79,7 +81,7 @@ async function processHookData(input, deps) {
         return PASS;
     }
     // Get model client
-    const getClient = deps?.getModelClient ?? createModelClient;
+    const getClient = deps?.getModelClient ?? ((c) => createModelClient(c, cwd));
     const modelClient = getClient(config);
     // Validate
     const validate = deps?.validatorFn ?? validator_1.validator;
@@ -90,9 +92,9 @@ async function processHookData(input, deps) {
     }
     return result;
 }
-function createModelClient(config) {
+function createModelClient(config, cwd) {
     if (config.useApi) {
         return new AnthropicApi_1.AnthropicApi(config);
     }
-    return new ClaudeCli_1.ClaudeCli(config);
+    return new ClaudeCli_1.ClaudeCli(config, cwd);
 }

@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AnthropicApi = void 0;
 const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
 const system_prompt_1 = require("../prompts/system-prompt");
+const API_MAX_TOKENS = 1024;
 class AnthropicApi {
     config;
     client;
@@ -19,7 +20,7 @@ class AnthropicApi {
         const response = await this.client.messages.create({
             model: this.config.model,
             system: system_prompt_1.SYSTEM_PROMPT,
-            max_tokens: 1024,
+            max_tokens: API_MAX_TOKENS,
             messages: [
                 {
                     role: 'user',

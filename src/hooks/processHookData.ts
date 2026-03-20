@@ -13,6 +13,8 @@ import { ClaudeCli } from '../validation/models/ClaudeCli'
 import { AnthropicApi } from '../validation/models/AnthropicApi'
 
 const PASS: ValidationResult = { decision: undefined, reason: '' }
+const HOOK_EVENT_PRE_TOOL_USE = 'PreToolUse'
+const COOLDOWN_DIR_NAME = 'claudemd-guard'
 
 export interface CooldownStore {
   getLastTime(key: string): number
@@ -23,7 +25,7 @@ class FileCooldownStore implements CooldownStore {
   private readonly dir: string
 
   constructor() {
-    this.dir = join(tmpdir(), 'claudemd-guard')
+    this.dir = join(tmpdir(), COOLDOWN_DIR_NAME)
     mkdirSync(this.dir, { recursive: true })
   }
 
@@ -79,7 +81,7 @@ export async function processHookData(
   const hookData = parseResult.data
 
   // Only process PreToolUse events
-  if (hookData.hook_event_name !== 'PreToolUse') {
+  if (hookData.hook_event_name !== HOOK_EVENT_PRE_TOOL_USE) {
     return PASS
   }
 
@@ -113,7 +115,7 @@ export async function processHookData(
   }
 
   // Get model client
-  const getClient = deps?.getModelClient ?? createModelClient
+  const getClient = deps?.getModelClient ?? ((c: Config) => createModelClient(c, cwd))
   const modelClient = getClient(config)
 
   // Validate
@@ -128,9 +130,9 @@ export async function processHookData(
   return result
 }
 
-function createModelClient(config: Config): IModelClient {
+function createModelClient(config: Config, cwd: string): IModelClient {
   if (config.useApi) {
     return new AnthropicApi(config)
   }
-  return new ClaudeCli(config)
+  return new ClaudeCli(config, cwd)
 }

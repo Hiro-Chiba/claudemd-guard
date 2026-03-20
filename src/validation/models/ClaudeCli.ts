@@ -6,11 +6,17 @@ import { IModelClient } from '../../contracts/types/ModelClient'
 import { Config } from '../../config/Config'
 import { SYSTEM_PROMPT } from '../prompts/system-prompt'
 
+const CLI_TIMEOUT_MS = 60_000
+const CLI_MAX_TURNS = '1'
+const DISALLOWED_TOOLS = 'Edit,Write,Bash,Read,Glob,Grep'
+
 export class ClaudeCli implements IModelClient {
   private readonly config: Config
+  private readonly cwd: string
 
-  constructor(config: Config) {
+  constructor(config: Config, cwd?: string) {
     this.config = config
+    this.cwd = cwd ?? process.cwd()
   }
 
   async ask(prompt: string): Promise<string> {
@@ -23,22 +29,22 @@ export class ClaudeCli implements IModelClient {
       '--output-format',
       'json',
       '--max-turns',
-      '1',
+      CLI_MAX_TURNS,
       '--model',
       this.config.model,
       '--disallowed-tools',
-      'Edit,Write,Bash,Read,Glob,Grep',
+      DISALLOWED_TOOLS,
       '--strict-mcp-config',
     ]
 
-    const claudeDir = join(process.cwd(), '.claude')
+    const claudeDir = join(this.cwd, '.claude')
     if (!existsSync(claudeDir)) {
       mkdirSync(claudeDir, { recursive: true })
     }
 
     const output = execFileSync(claudeBinary, args, {
       encoding: 'utf-8',
-      timeout: 60000,
+      timeout: CLI_TIMEOUT_MS,
       input: fullPrompt,
       cwd: claudeDir,
       shell: process.platform === 'win32',
@@ -53,13 +59,11 @@ export class ClaudeCli implements IModelClient {
       return 'claude'
     }
 
-    // Try the standard Claude Code local binary first
     const localBinary = join(homedir(), '.claude', 'local', 'claude')
     if (existsSync(localBinary)) {
       return localBinary
     }
 
-    // Fall back to PATH
     return 'claude'
   }
 }

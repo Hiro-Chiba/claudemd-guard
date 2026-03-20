@@ -3,6 +3,8 @@ import { Config } from '../../config/Config'
 import { IModelClient } from '../../contracts/types/ModelClient'
 import { SYSTEM_PROMPT } from '../prompts/system-prompt'
 
+const API_MAX_TOKENS = 1024
+
 export class AnthropicApi implements IModelClient {
   private readonly config: Config
   private readonly client: Anthropic
@@ -18,7 +20,7 @@ export class AnthropicApi implements IModelClient {
     const response = await this.client.messages.create({
       model: this.config.model,
       system: SYSTEM_PROMPT,
-      max_tokens: 1024,
+      max_tokens: API_MAX_TOKENS,
       messages: [
         {
           role: 'user',

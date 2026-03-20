@@ -6,10 +6,15 @@ const path_1 = require("path");
 const os_1 = require("os");
 const fs_1 = require("fs");
 const system_prompt_1 = require("../prompts/system-prompt");
+const CLI_TIMEOUT_MS = 60_000;
+const CLI_MAX_TURNS = '1';
+const DISALLOWED_TOOLS = 'Edit,Write,Bash,Read,Glob,Grep';
 class ClaudeCli {
     config;
-    constructor(config) {
+    cwd;
+    constructor(config, cwd) {
         this.config = config;
+        this.cwd = cwd ?? process.cwd();
     }
     async ask(prompt) {
         const claudeBinary = this.getClaudeBinary();
@@ -19,20 +24,20 @@ class ClaudeCli {
             '--output-format',
             'json',
             '--max-turns',
-            '1',
+            CLI_MAX_TURNS,
             '--model',
             this.config.model,
             '--disallowed-tools',
-            'Edit,Write,Bash,Read,Glob,Grep',
+            DISALLOWED_TOOLS,
             '--strict-mcp-config',
         ];
-        const claudeDir = (0, path_1.join)(process.cwd(), '.claude');
+        const claudeDir = (0, path_1.join)(this.cwd, '.claude');
         if (!(0, fs_1.existsSync)(claudeDir)) {
             (0, fs_1.mkdirSync)(claudeDir, { recursive: true });
         }
         const output = (0, child_process_1.execFileSync)(claudeBinary, args, {
             encoding: 'utf-8',
-            timeout: 60000,
+            timeout: CLI_TIMEOUT_MS,
             input: fullPrompt,
             cwd: claudeDir,
             shell: process.platform === 'win32',
@@ -44,12 +49,10 @@ class ClaudeCli {
         if (this.config.useSystemClaude) {
             return 'claude';
         }
-        // Try the standard Claude Code local binary first
         const localBinary = (0, path_1.join)((0, os_1.homedir)(), '.claude', 'local', 'claude');
         if ((0, fs_1.existsSync)(localBinary)) {
             return localBinary;
         }
-        // Fall back to PATH
         return 'claude';
     }
 }
