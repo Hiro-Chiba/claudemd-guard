@@ -44,7 +44,13 @@ class ClaudeCli {
         if (this.config.useSystemClaude) {
             return 'claude';
         }
-        return (0, path_1.join)((0, os_1.homedir)(), '.claude', 'local', 'claude');
+        // Try the standard Claude Code local binary first
+        const localBinary = (0, path_1.join)((0, os_1.homedir)(), '.claude', 'local', 'claude');
+        if ((0, fs_1.existsSync)(localBinary)) {
+            return localBinary;
+        }
+        // Fall back to PATH
+        return 'claude';
     }
 }
 exports.ClaudeCli = ClaudeCli;

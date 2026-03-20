@@ -52,6 +52,14 @@ export class ClaudeCli implements IModelClient {
     if (this.config.useSystemClaude) {
       return 'claude'
     }
-    return join(homedir(), '.claude', 'local', 'claude')
+
+    // Try the standard Claude Code local binary first
+    const localBinary = join(homedir(), '.claude', 'local', 'claude')
+    if (existsSync(localBinary)) {
+      return localBinary
+    }
+
+    // Fall back to PATH
+    return 'claude'
   }
 }
