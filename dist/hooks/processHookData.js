@@ -46,11 +46,11 @@ async function processHookData(input, deps) {
     catch {
         return PASS;
     }
-    const result = hookDataSchema_1.HookDataSchema.safeParse(parsed);
-    if (!result.success) {
+    const parseResult = hookDataSchema_1.HookDataSchema.safeParse(parsed);
+    if (!parseResult.success) {
         return PASS;
     }
-    const hookData = result.data;
+    const hookData = parseResult.data;
     // Only process PreToolUse events
     if (hookData.hook_event_name !== 'PreToolUse') {
         return PASS;
@@ -62,14 +62,15 @@ async function processHookData(input, deps) {
     }
     // Cooldown check (file-based, persists across process invocations)
     const cwd = deps?.cwd ?? process.cwd();
-    if (config.cooldown > 0) {
-        const store = deps?.cooldownStore ?? new FileCooldownStore();
+    const cooldownStore = config.cooldown > 0
+        ? deps?.cooldownStore ?? new FileCooldownStore()
+        : undefined;
+    if (cooldownStore && config.cooldown > 0) {
         const now = Math.floor(Date.now() / 1000);
-        const lastTime = store.getLastTime(cwd);
+        const lastTime = cooldownStore.getLastTime(cwd);
         if (now - lastTime < config.cooldown) {
             return PASS;
         }
-        store.setLastTime(cwd, now);
     }
     // Collect CLAUDE.md files
     const collect = deps?.collectFn ?? collectClaudeMd_1.collectClaudeMd;
@@ -82,7 +83,12 @@ async function processHookData(input, deps) {
     const modelClient = getClient(config);
     // Validate
     const validate = deps?.validatorFn ?? validator_1.validator;
-    return validate(claudeMdFiles, toolName, toolInput, modelClient);
+    const result = await validate(claudeMdFiles, toolName, toolInput, modelClient);
+    // Update cooldown timestamp AFTER successful validation
+    if (cooldownStore) {
+        cooldownStore.setLastTime(cwd, Math.floor(Date.now() / 1000));
+    }
+    return result;
 }
 function createModelClient(config) {
     if (config.useApi) {

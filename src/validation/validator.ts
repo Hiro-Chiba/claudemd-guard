@@ -30,10 +30,10 @@ export async function validator(
 
 function parseModelResponse(response: string): ValidationResult {
   const jsonString = extractJsonString(response)
-  const parsed: ModelResponseJson = JSON.parse(jsonString)
+  const parsed = JSON.parse(jsonString) as Partial<ModelResponseJson>
   return {
     decision: parsed.decision === 'block' ? 'block' : undefined,
-    reason: parsed.reason,
+    reason: parsed.reason ?? '',
   }
 }
 
@@ -77,19 +77,30 @@ function extractFromJsonCodeBlock(response: string): string | null {
 
 function extractFromGenericCodeBlock(response: string): string | null {
   const startPattern = '```'
-  const blockStart = response.indexOf(startPattern)
-  if (blockStart === -1) return null
+  let lastValidBlock: string | null = null
+  let searchFrom = 0
 
-  let contentStart = blockStart + startPattern.length
-  while (contentStart < response.length && /\s/.test(response[contentStart])) {
-    contentStart++
+  while (true) {
+    const blockStart = response.indexOf(startPattern, searchFrom)
+    if (blockStart === -1) break
+
+    let contentStart = blockStart + startPattern.length
+    while (contentStart < response.length && /\s/.test(response[contentStart])) {
+      contentStart++
+    }
+
+    const blockEnd = response.indexOf(startPattern, contentStart)
+    if (blockEnd === -1) break
+
+    const content = response.substring(contentStart, blockEnd).trim()
+    if (isValidJson(content)) {
+      lastValidBlock = content
+    }
+
+    searchFrom = blockEnd + startPattern.length
   }
 
-  const blockEnd = response.indexOf(startPattern, contentStart)
-  if (blockEnd === -1) return null
-
-  const content = response.substring(contentStart, blockEnd).trim()
-  return isValidJson(content) ? content : null
+  return lastValidBlock
 }
 
 function extractPlainJson(response: string): string | null {

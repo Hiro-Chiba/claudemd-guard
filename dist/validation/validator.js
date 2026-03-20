@@ -21,7 +21,7 @@ function parseModelResponse(response) {
     const parsed = JSON.parse(jsonString);
     return {
         decision: parsed.decision === 'block' ? 'block' : undefined,
-        reason: parsed.reason,
+        reason: parsed.reason ?? '',
     };
 }
 function extractJsonString(response) {
@@ -58,18 +58,26 @@ function extractFromJsonCodeBlock(response) {
 }
 function extractFromGenericCodeBlock(response) {
     const startPattern = '```';
-    const blockStart = response.indexOf(startPattern);
-    if (blockStart === -1)
-        return null;
-    let contentStart = blockStart + startPattern.length;
-    while (contentStart < response.length && /\s/.test(response[contentStart])) {
-        contentStart++;
+    let lastValidBlock = null;
+    let searchFrom = 0;
+    while (true) {
+        const blockStart = response.indexOf(startPattern, searchFrom);
+        if (blockStart === -1)
+            break;
+        let contentStart = blockStart + startPattern.length;
+        while (contentStart < response.length && /\s/.test(response[contentStart])) {
+            contentStart++;
+        }
+        const blockEnd = response.indexOf(startPattern, contentStart);
+        if (blockEnd === -1)
+            break;
+        const content = response.substring(contentStart, blockEnd).trim();
+        if (isValidJson(content)) {
+            lastValidBlock = content;
+        }
+        searchFrom = blockEnd + startPattern.length;
     }
-    const blockEnd = response.indexOf(startPattern, contentStart);
-    if (blockEnd === -1)
-        return null;
-    const content = response.substring(contentStart, blockEnd).trim();
-    return isValidJson(content) ? content : null;
+    return lastValidBlock;
 }
 function extractPlainJson(response) {
     const pattern = /\{[^{}]*"decision"[^{}]*"reason"[^{}]*}|\{[^{}]*"reason"[^{}]*"decision"[^{}]*}/g;

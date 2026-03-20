@@ -11,7 +11,8 @@ class Config {
     constructor(options) {
         this.model = options?.model ?? process.env.CLAUDEMD_GUARD_MODEL ?? exports.DEFAULT_MODEL;
         this.apiKey = options?.apiKey ?? process.env.CLAUDEMD_GUARD_API_KEY;
-        this.cooldown = options?.cooldown ?? parseInt(process.env.CLAUDEMD_GUARD_COOLDOWN ?? '0', 10);
+        const parsedCooldown = parseInt(process.env.CLAUDEMD_GUARD_COOLDOWN ?? '0', 10);
+        this.cooldown = options?.cooldown ?? (Number.isNaN(parsedCooldown) ? 0 : parsedCooldown);
         this.disabled = options?.disabled ?? process.env.CLAUDEMD_GUARD_DISABLED === 'true';
         this.useSystemClaude = options?.useSystemClaude ?? process.env.USE_SYSTEM_CLAUDE === 'true';
     }
