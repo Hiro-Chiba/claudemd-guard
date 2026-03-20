@@ -1,67 +1,160 @@
-# アーキテクチャ
+# Architecture
 
-## 概要
+## Overview
 
-claudemd-guard v2 は Claude Code の PreToolUse フックとして動作する TypeScript アプリケーション。
-`Edit`/`Write`/`Bash` ツール実行前に発火し、CLAUDE.md のルールに対して AI 検証を行い、
-違反操作をブロックする。
+claudemd-guard v2 is a TypeScript application that runs as a Claude Code PreToolUse hook.
+It fires before `Edit`/`Write`/`Bash` tool execution, validates the operation against CLAUDE.md rules using AI, and blocks violations.
 
-## フック動作フロー
+## Hook Flow
 
-```
-Claude Code (Edit/Write/Bash)
-  ↓ PreToolUse event
-  ↓ stdin: JSON (hook_event_name, tool_name, tool_input)
-claudemd-guard
-  1. stdin から JSON パース
-  2. PreToolUse 以外はスキップ
-  3. クールダウンチェック（オプション）
-  4. CLAUDE.md 収集（上方向 + 下方向探索）
-  5. AI にルール + ツール操作を送信
-  6. AI レスポンス解析 → block or pass
-  7. stdout: JSON {"decision": "block"|null, "reason": "..."}
-  ↓
-Claude Code（block なら操作を中止、null なら続行）
-```
+```mermaid
+sequenceDiagram
+    participant CC as Claude Code
+    participant Hook as claudemd-guard
+    participant FS as File System
+    participant AI as AI Model
 
-## CLAUDE.md 収集ロジック
+    CC->>Hook: PreToolUse event (stdin JSON)
+    Note over Hook: Parse JSON<br/>Check: PreToolUse?<br/>Check: disabled?<br/>Check: cooldown?
 
-### 上方向探索
-`$PWD` から `/` まで各ディレクトリの CLAUDE.md を収集。
+    Hook->>FS: Collect CLAUDE.md files
+    FS-->>Hook: Rules from project tree
 
-### 下方向探索
-`$PWD` 配下を最大深度3まで再帰探索。以下を除外:
-- node_modules, .git, target, .venv, vendor, __pycache__, dist, build
+    Hook->>AI: Rules + tool operation
+    AI-->>Hook: {"decision": "block"|null, "reason": "..."}
 
-## AI 検証
-
-### モデルクライアント優先順位
-1. **Claude CLI（デフォルト）**: `~/.claude/local/claude` → 存在しなければPATH上の `claude` を子プロセスで実行。APIキー不要
-2. **Anthropic API**: `CLAUDEMD_GUARD_API_KEY` が設定されていれば直接API呼び出し
-
-### システムプロンプト
-- 明確なルール違反のみブロック
-- 曖昧な場合は通す（過剰ブロック防止）
-- ルールに書かれていないことは違反ではない
-
-### レスポンスフォーマット
-```json
-{"decision": "block" | null, "reason": "..."}
+    alt Violation detected
+        Hook-->>CC: {"decision": "block", "reason": "..."}
+        Note over CC: Operation blocked
+    else No violation
+        Hook-->>CC: {"reason": "No violation found"}
+        Note over CC: Operation proceeds
+    end
 ```
 
-## 環境変数
+## Module Structure
 
-| 変数名 | デフォルト | 説明 |
+```mermaid
+graph TD
+    subgraph CLI
+        A[cli/claudemd-guard.ts<br/>stdin → process → stdout]
+    end
+
+    subgraph Core
+        B[hooks/processHookData.ts<br/>Orchestration]
+        C[config/Config.ts<br/>Environment variables]
+    end
+
+    subgraph Collector
+        D[collector/collectClaudeMd.ts<br/>Upward + downward walk]
+    end
+
+    subgraph Validation
+        E[validation/validator.ts<br/>AI call + response parse]
+        F[models/ClaudeCli.ts<br/>CLI subprocess]
+        G[models/AnthropicApi.ts<br/>Anthropic SDK]
+        H[prompts/*<br/>System prompt, context, response format]
+    end
+
+    subgraph Contracts
+        I[types/ + schemas/<br/>ValidationResult, HookData, Zod schemas]
+    end
+
+    A --> B
+    B --> C
+    B --> D
+    B --> E
+    E --> F
+    E --> G
+    E --> H
+    B --> I
+    E --> I
+```
+
+## CLAUDE.md Collection
+
+```mermaid
+graph LR
+    subgraph Upward ["Upward Walk (pwd → /)"]
+        direction TB
+        U1["/users/me/project/src"] -->|parent| U2["/users/me/project"]
+        U2 -->|parent| U3["/users/me"]
+        U3 -->|parent| U4["/users"]
+        U4 -->|parent| U5["/"]
+    end
+
+    subgraph Downward ["Downward Walk (max depth 3)"]
+        direction TB
+        D1["project/"] --> D2["src/"]
+        D1 --> D3["lib/"]
+        D2 --> D4["components/"]
+        D1 ~~~ D5["node_modules/ ✗"]
+        D1 ~~~ D6[".git/ ✗"]
+    end
+
+    Upward -->|deduplicate| R[Combined CLAUDE.md files]
+    Downward -->|deduplicate| R
+```
+
+## Model Client Selection
+
+```mermaid
+flowchart TD
+    Start[Start] --> CheckAPI{CLAUDEMD_GUARD_API_KEY<br/>set?}
+    CheckAPI -->|Yes| API[AnthropicApi<br/>Direct API call]
+    CheckAPI -->|No| CheckSystem{USE_SYSTEM_CLAUDE<br/>= true?}
+    CheckSystem -->|Yes| PATH[claude from PATH]
+    CheckSystem -->|No| CheckLocal{~/.claude/local/claude<br/>exists?}
+    CheckLocal -->|Yes| Local[~/.claude/local/claude]
+    CheckLocal -->|No| PATH
+```
+
+## Early Exit Conditions
+
+```mermaid
+flowchart TD
+    Input[stdin JSON] --> Parse{Valid JSON?}
+    Parse -->|No| Pass1[PASS]
+    Parse -->|Yes| Event{PreToolUse?}
+    Event -->|No| Pass2[PASS]
+    Event -->|Yes| Disabled{Disabled?}
+    Disabled -->|Yes| Pass3[PASS]
+    Disabled -->|No| Tool{tool_name +<br/>tool_input?}
+    Tool -->|No| Pass4[PASS]
+    Tool -->|Yes| Cooldown{Within<br/>cooldown?}
+    Cooldown -->|Yes| Pass5[PASS]
+    Cooldown -->|No| Collect{CLAUDE.md<br/>found?}
+    Collect -->|No| Pass6[PASS]
+    Collect -->|Yes| Validate[AI Validation]
+    Validate --> Result{Decision?}
+    Result -->|block| Block[BLOCK]
+    Result -->|null| Pass7[PASS]
+
+    style Block fill:#f66,color:#fff
+    style Pass1 fill:#6c6,color:#fff
+    style Pass2 fill:#6c6,color:#fff
+    style Pass3 fill:#6c6,color:#fff
+    style Pass4 fill:#6c6,color:#fff
+    style Pass5 fill:#6c6,color:#fff
+    style Pass6 fill:#6c6,color:#fff
+    style Pass7 fill:#6c6,color:#fff
+```
+
+## Configuration
+
+| Variable | Default | Description |
 |---|---|---|
-| `CLAUDEMD_GUARD_MODEL` | `claude-sonnet-4-6` | 検証モデル |
-| `CLAUDEMD_GUARD_API_KEY` | — | Anthropic APIキー |
-| `CLAUDEMD_GUARD_COOLDOWN` | `0` | クールダウン秒数 |
-| `CLAUDEMD_GUARD_DISABLED` | `false` | 無効化フラグ |
-| `USE_SYSTEM_CLAUDE` | `false` | `true`でPATH上のclaudeを強制使用（デフォルトは~/.claude/local/claude → PATHフォールバック） |
+| `CLAUDEMD_GUARD_MODEL` | `claude-sonnet-4-6` | Validation model |
+| `CLAUDEMD_GUARD_API_KEY` | — | Anthropic API key |
+| `CLAUDEMD_GUARD_COOLDOWN` | `0` | Cooldown in seconds |
+| `CLAUDEMD_GUARD_DISABLED` | `false` | Disable flag |
+| `USE_SYSTEM_CLAUDE` | `false` | `true` forces PATH claude (default: ~/.claude/local/claude with PATH fallback) |
 
-## インストール構成
+## Installation
 
 ```
-~/.claude/settings.json に PreToolUse フック設定を追加
-→ node /path/to/claudemd-guard/dist/cli/claudemd-guard.js
+~/.claude/settings.json
+└── hooks.PreToolUse[]
+    └── matcher: "Edit|Write|Bash"
+        └── command: "node /path/to/claudemd-guard/dist/cli/claudemd-guard.js"
 ```

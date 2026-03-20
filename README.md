@@ -2,7 +2,7 @@
 
 AI-powered CLAUDE.md enforcer for Claude Code.
 
-[English](#english) | [日本語](#日本語)
+[English](#english) | [日本語](#日本語) | [Architecture](docs/architecture.md)
 
 ---
 
