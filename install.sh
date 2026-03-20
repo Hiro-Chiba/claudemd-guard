@@ -1,65 +1,66 @@
 #!/usr/bin/env bash
-# Install claudemd-guard hook into Claude Code settings
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-HOOKS_DIR="$HOME/.claude/hooks"
-SETTINGS_FILE="$HOME/.claude/settings.json"
-HOOK_NAME="claudemd-guard.sh"
+DIST_ENTRY="${SCRIPT_DIR}/dist/cli/claudemd-guard.js"
+SETTINGS_FILE="${HOME}/.claude/settings.json"
+HOOK_CMD="node ${DIST_ENTRY}"
 
-echo "=== claudemd-guard installer ==="
+echo "=== claudemd-guard v2 installer ==="
 
-# 1. Create hooks directory
-mkdir -p "$HOOKS_DIR"
+# 1. Build
+echo "[1/3] Building..."
+cd "$SCRIPT_DIR"
+npm install
+npm run build
 
-# 2. Symlink the hook script
-if [[ -L "$HOOKS_DIR/$HOOK_NAME" ]]; then
-  echo "Updating existing symlink..."
-  rm "$HOOKS_DIR/$HOOK_NAME"
-elif [[ -f "$HOOKS_DIR/$HOOK_NAME" ]]; then
-  echo "Warning: $HOOKS_DIR/$HOOK_NAME exists as a regular file. Backing up..."
-  mv "$HOOKS_DIR/$HOOK_NAME" "$HOOKS_DIR/$HOOK_NAME.bak"
-fi
-
-ln -s "$SCRIPT_DIR/$HOOK_NAME" "$HOOKS_DIR/$HOOK_NAME"
-echo "Symlinked: $HOOKS_DIR/$HOOK_NAME -> $SCRIPT_DIR/$HOOK_NAME"
-
-# 3. Update settings.json
-if ! command -v jq &>/dev/null; then
-  echo "Error: jq is required but not installed. Install it with: brew install jq"
+if [[ ! -f "$DIST_ENTRY" ]]; then
+  echo "ERROR: Build failed — ${DIST_ENTRY} not found"
   exit 1
 fi
 
-# Create settings.json if it doesn't exist
+echo "[2/3] Build complete."
+
+# 2. Update settings.json
+echo "[3/3] Updating Claude Code settings..."
+
+mkdir -p "$(dirname "$SETTINGS_FILE")"
+
 if [[ ! -f "$SETTINGS_FILE" ]]; then
   echo '{}' > "$SETTINGS_FILE"
 fi
 
-# Define the hook entry we want to add
-HOOK_ENTRY='{
-  "matcher": "Edit|Write|Bash",
-  "hooks": [
+# Use node to safely merge the hook config into settings.json
+node -e "
+const fs = require('fs');
+const settingsPath = '${SETTINGS_FILE}';
+const hookCmd = '${HOOK_CMD}';
+
+const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+
+if (!settings.hooks) settings.hooks = {};
+if (!settings.hooks.PreToolUse) settings.hooks.PreToolUse = [];
+
+// Remove any existing claudemd-guard entries
+settings.hooks.PreToolUse = settings.hooks.PreToolUse.filter(entry => {
+  if (!entry.hooks) return true;
+  return !entry.hooks.some(h => h.command && h.command.includes('claudemd-guard'));
+});
+
+// Add new entry
+settings.hooks.PreToolUse.push({
+  matcher: 'Edit|Write|Bash',
+  hooks: [
     {
-      "type": "command",
-      "command": "~/.claude/hooks/claudemd-guard.sh"
+      type: 'command',
+      command: hookCmd
     }
   ]
-}'
+});
 
-# Check if claudemd-guard is already configured
-if jq -e '.hooks.PreToolUse[]? | select(.hooks[]?.command | test("claudemd-guard"))' "$SETTINGS_FILE" &>/dev/null; then
-  echo "Hook already configured in settings.json. Skipping."
-else
-  # Merge into existing settings
-  UPDATED=$(jq --argjson entry "$HOOK_ENTRY" '
-    .hooks //= {} |
-    .hooks.PreToolUse //= [] |
-    .hooks.PreToolUse += [$entry]
-  ' "$SETTINGS_FILE")
-
-  printf '%s\n' "$UPDATED" > "$SETTINGS_FILE"
-  echo "Added PreToolUse hook to $SETTINGS_FILE"
-fi
+fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
+"
 
 echo ""
-echo "Installation complete! Restart Claude Code to activate the hook."
+echo "Done! claudemd-guard v2 installed."
+echo "Restart Claude Code to activate."

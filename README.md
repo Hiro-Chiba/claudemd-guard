@@ -1,48 +1,67 @@
 # claudemd-guard
 
-Claude Code の長いセッションでコンテキスト圧縮により CLAUDE.md の指示が忘れられる問題を防ぐ PreToolUse フック。
+AI-powered CLAUDE.md enforcer for Claude Code.
 
-ファイル編集やコマンド実行の前に CLAUDE.md の内容を自動的にコンテキストへ再注入し、プロジェクトルールの遵守を強制する。
+Claude Code の長時間セッションで発生するコンテキスト圧縮による CLAUDE.md ルール忘れを防止。
+AI がツール操作を検証し、ルール違反をブロックします。
 
-## 仕組み
+## Features
 
-1. Claude Code が `Edit`/`Write`/`Bash` ツールを実行する前にフックが発火
-2. カレントディレクトリから上方向に `/` まで遡り、全 CLAUDE.md を収集
-3. カレントディレクトリ配下（最大深度3）の CLAUDE.md も収集
-4. 収集した内容を Claude Code のコンテキストに注入
+- CLAUDE.md ルールの AI 検証（ブロック方式）
+- Claude CLI 経由でのAI呼び出し（追加APIキー不要）
+- Anthropic API 直接呼び出しも対応
+- 上方向 + 下方向の CLAUDE.md 自動収集
+- クールダウン機能（オプション）
 
-クールダウン機構（デフォルト5分）により、頻繁なツール呼び出し時のオーバーヘッドを抑制する。
+## Requirements
 
-## インストール
+- Node.js >= 22.0.0
+- Claude Code（CLI）がインストール済み
+
+## Installation
 
 ```bash
-git clone https://github.com/chibahiroyuki/claudemd-guard.git
+git clone https://github.com/Hiro-Chiba/claudemd-guard.git
 cd claudemd-guard
 ./install.sh
 ```
 
-`jq` が必要。未インストールの場合:
+Claude Code を再起動すれば有効になります。
 
-```bash
-brew install jq
-```
-
-インストール後、Claude Code を再起動する。
-
-## アンインストール
+## Uninstallation
 
 ```bash
 ./uninstall.sh
 ```
 
-## 設定
+## Configuration
 
-環境変数でカスタマイズ可能:
+環境変数で設定を変更できます:
 
-| 環境変数 | デフォルト | 説明 |
+| 変数名 | デフォルト | 説明 |
 |---|---|---|
-| `CLAUDEMD_COOLDOWN` | `300` | クールダウン秒数（0で常時出力） |
+| `CLAUDEMD_GUARD_MODEL` | `claude-sonnet-4-6` | 検証に使用するモデル |
+| `CLAUDEMD_GUARD_API_KEY` | — | Anthropic APIキー（設定時はAPI直接呼び出し） |
+| `CLAUDEMD_GUARD_COOLDOWN` | `0` | クールダウン秒数（0=毎回検証） |
+| `CLAUDEMD_GUARD_DISABLED` | `false` | 無効化フラグ |
+| `USE_SYSTEM_CLAUDE` | `false` | PATHのclaude使用（デフォルトは~/.claude/local/claude） |
 
-## ライセンス
+## How It Works
+
+1. Claude Code が `Edit`/`Write`/`Bash` を実行しようとすると PreToolUse フックが発火
+2. claudemd-guard がプロジェクト内の CLAUDE.md を収集
+3. AI がルールとツール操作を照合して違反判定
+4. 違反あり → ブロック（操作中止）、違反なし → 素通し
+
+## Development
+
+```bash
+npm install
+npm run build    # ビルド
+npm test         # テスト実行
+npm run checks   # 型チェック + テスト
+```
+
+## License
 
 MIT
