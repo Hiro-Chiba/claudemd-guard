@@ -1,1 +1,0 @@
-{"version":3,"file":"HookData.d.ts","sourceRoot":"","sources":["../../../src/contracts/types/HookData.ts"],"names":[],"mappings":"AAAA,MAAM,MAAM,QAAQ,GAAG;IACrB,eAAe,EAAE,MAAM,CAAA;IACvB,SAAS,CAAC,EAAE,MAAM,CAAA;IAClB,UAAU,CAAC,EAAE,MAAM,CAAC,MAAM,EAAE,OAAO,CAAC,CAAA;CACrC,CAAA"}

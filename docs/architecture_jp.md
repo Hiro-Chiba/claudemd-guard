@@ -113,13 +113,13 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Input[stdin JSON] --> Parse{有効なJSON?}
-    Parse -->|No| Pass1[通過]
+    Input[stdin JSON] --> Disabled{無効化?}
+    Disabled -->|Yes| Pass1[通過]
+    Disabled -->|No| Parse{有効なJSON?}
+    Parse -->|No| Pass2[通過]
     Parse -->|Yes| Event{PreToolUse?}
-    Event -->|No| Pass2[通過]
-    Event -->|Yes| Disabled{無効化?}
-    Disabled -->|Yes| Pass3[通過]
-    Disabled -->|No| Tool{tool_name +<br/>tool_input<br/>あり?}
+    Event -->|No| Pass3[通過]
+    Event -->|Yes| Tool{tool_name +<br/>tool_input<br/>あり?}
     Tool -->|No| Pass4[通過]
     Tool -->|Yes| Cooldown{クールダウン<br/>期間内?}
     Cooldown -->|Yes| Pass5[通過]

@@ -1,2 +1,0 @@
-export declare const RESPONSE_FORMAT = "\nRespond in the following JSON format only. Do not include any other text.\n\nIf there is a violation:\n```json\n{\"decision\": \"block\", \"reason\": \"Explanation of the violation\"}\n```\n\nIf there is no violation:\n```json\n{\"decision\": null, \"reason\": \"No violation found\"}\n```";
-//# sourceMappingURL=response.d.ts.map
