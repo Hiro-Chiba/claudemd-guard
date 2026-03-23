@@ -22,12 +22,13 @@ sequenceDiagram
 
     Hook->>AI: Rules + tool operation
     AI-->>Hook: {"decision": "block"|null, "reason": "..."}
+    Note over Hook: Normalizes null → undefined
 
     alt Violation detected
         Hook-->>CC: {"decision": "block", "reason": "..."}
         Note over CC: Operation blocked
     else No violation
-        Hook-->>CC: {"reason": "No violation found"}
+        Hook-->>CC: {"decision": undefined, "reason": "..."}
         Note over CC: Operation proceeds
     end
 ```
@@ -128,7 +129,7 @@ flowchart TD
     Collect -->|Yes| Validate[AI Validation]
     Validate --> Result{Decision?}
     Result -->|block| Block[BLOCK]
-    Result -->|null| Pass7[PASS]
+    Result -->|undefined| Pass7[PASS]
 
     style Block fill:#f66,color:#fff
     style Pass1 fill:#6c6,color:#fff

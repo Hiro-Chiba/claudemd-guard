@@ -22,12 +22,13 @@ sequenceDiagram
 
     Hook->>AI: ルール + ツール操作
     AI-->>Hook: {"decision": "block"|null, "reason": "..."}
+    Note over Hook: null → undefined に正規化
 
     alt 違反あり
         Hook-->>CC: {"decision": "block", "reason": "..."}
         Note over CC: 操作ブロック
     else 違反なし
-        Hook-->>CC: {"reason": "No violation found"}
+        Hook-->>CC: {"decision": undefined, "reason": "..."}
         Note over CC: 操作続行
     end
 ```
@@ -128,7 +129,7 @@ flowchart TD
     Collect -->|Yes| Validate[AI検証]
     Validate --> Result{判定結果?}
     Result -->|block| Block[ブロック]
-    Result -->|null| Pass7[通過]
+    Result -->|undefined| Pass7[通過]
 
     style Block fill:#f66,color:#fff
     style Pass1 fill:#6c6,color:#fff
