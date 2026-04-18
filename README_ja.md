@@ -1,5 +1,10 @@
 # claudemd-guard
 
+[![CI](https://github.com/Hiro-Chiba/claudemd-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/Hiro-Chiba/claudemd-guard/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/claudemd-guard.svg)](https://www.npmjs.com/package/claudemd-guard)
+[![License: MIT](https://img.shields.io/npm/l/claudemd-guard.svg)](LICENSE)
+[![Node](https://img.shields.io/node/v/claudemd-guard.svg)](package.json)
+
 Claude Code 用の AI 駆動型 CLAUDE.md エンフォーサー。
 
 [English](README.md) | 日本語 | [アーキテクチャ](docs/architecture_jp.md)
