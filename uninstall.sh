@@ -1,43 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SETTINGS_FILE="${HOME}/.claude/settings.json"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+DIST_ENTRY="${SCRIPT_DIR}/dist/cli/claudemd-guard.js"
 
-echo "=== claudemd-guard v2 uninstaller ==="
+echo "=== claudemd-guard uninstaller (git-clone mode) ==="
+echo ""
+echo "Note: if you installed via 'npm install -g claudemd-guard',"
+echo "you can run 'claudemd-guard uninstall' directly instead of this script."
+echo ""
 
-# Remove hook entries from settings.json
-if [[ -f "$SETTINGS_FILE" ]]; then
-  echo "Removing hook from settings.json..."
-
-  node -e "
-const fs = require('fs');
-const settingsPath = '${SETTINGS_FILE}';
-
-const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-
-if (settings.hooks && settings.hooks.PreToolUse) {
-  settings.hooks.PreToolUse = settings.hooks.PreToolUse.filter(entry => {
-    if (!entry.hooks) return true;
-    return !entry.hooks.some(h => h.command && h.command.includes('claudemd-guard'));
-  });
-
-  // Clean up empty arrays
-  if (settings.hooks.PreToolUse.length === 0) {
-    delete settings.hooks.PreToolUse;
-  }
-  if (Object.keys(settings.hooks).length === 0) {
-    delete settings.hooks;
-  }
-}
-
-fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
-"
-
-  echo "Hook removed from settings.json."
-else
-  echo "No settings.json found — nothing to clean up."
+if [[ ! -f "$DIST_ENTRY" ]]; then
+  echo "ERROR: ${DIST_ENTRY} not found. Run ./install.sh first, or use 'claudemd-guard uninstall' if installed globally."
+  exit 1
 fi
 
-echo ""
-echo "Done! claudemd-guard v2 uninstalled."
-echo "Restart Claude Code to deactivate."
+node "$DIST_ENTRY" uninstall

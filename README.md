@@ -1,5 +1,10 @@
 # claudemd-guard
 
+[![CI](https://github.com/Hiro-Chiba/claudemd-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/Hiro-Chiba/claudemd-guard/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/claudemd-guard.svg)](https://www.npmjs.com/package/claudemd-guard)
+[![License: MIT](https://img.shields.io/npm/l/claudemd-guard.svg)](LICENSE)
+[![Node](https://img.shields.io/node/v/claudemd-guard.svg)](package.json)
+
 AI-powered CLAUDE.md enforcer for Claude Code.
 
 English | [日本語](README_ja.md) | [Architecture](docs/architecture.md)
@@ -23,6 +28,15 @@ Prevents Claude Code from forgetting CLAUDE.md rules during long sessions caused
 
 ## Installation
 
+Via npm (recommended):
+
+```bash
+npm install -g claudemd-guard
+claudemd-guard install
+```
+
+Or via git clone:
+
 ```bash
 git clone https://github.com/Hiro-Chiba/claudemd-guard.git
 cd claudemd-guard
@@ -34,6 +48,8 @@ Restart Claude Code to activate.
 ## Uninstallation
 
 ```bash
+claudemd-guard uninstall
+# or, if installed via git clone:
 ./uninstall.sh
 ```
 

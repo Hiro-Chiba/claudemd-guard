@@ -8,3 +8,10 @@ coverage
 .env.*.local
 .DS_Store
 /tmp/
+
+# Personal / hobby convention files (not for OSS consumers)
+AGENTS.md
+docs/reddit-post-*.md
+tasks/
+lessons.md
+*.tgz
