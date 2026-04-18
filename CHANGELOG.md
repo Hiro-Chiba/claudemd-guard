@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.0.0] - 2026-04-19
+## [1.0.0] - 2026-04-19
 
-First npm-distributed release. Reflects the TypeScript rewrite and the move from shell-based install to subcommand-based install.
+First public release on npm. Reflects the TypeScript implementation and subcommand-based install flow.
 
 ### Added
 

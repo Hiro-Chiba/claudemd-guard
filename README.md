@@ -7,11 +7,13 @@
 
 AI-powered CLAUDE.md enforcer for Claude Code.
 
-English | [日本語](README_ja.md) | [Architecture](docs/architecture.md)
+English | [日本語](README_ja.md) | [Architecture](docs/architecture.md) | [Releases on npm](https://www.npmjs.com/package/claudemd-guard)
 
 ---
 
 Prevents Claude Code from forgetting CLAUDE.md rules during long sessions caused by context compression. AI validates every tool operation against your project rules and blocks violations.
+
+Available on npm: **[claudemd-guard](https://www.npmjs.com/package/claudemd-guard)**
 
 ## Features
 
