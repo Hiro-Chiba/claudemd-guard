@@ -39,7 +39,7 @@
     "prepublishOnly": "npm run checks && npm run build"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.72.1",
+    "@anthropic-ai/sdk": "^0.90.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
