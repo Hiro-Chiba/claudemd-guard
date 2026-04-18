@@ -1,0 +1,76 @@
+name: Bug Report
+description: Report a reproducible problem with claudemd-guard
+title: "[Bug] <short description>"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill out the sections below so we can reproduce the issue quickly.
+
+        For security-related issues, please do NOT use this template. See [SECURITY.md](https://github.com/Hiro-Chiba/claudemd-guard/blob/main/SECURITY.md) instead.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A clear and concise description of the bug.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Minimal steps to reproduce the bug.
+      placeholder: |
+        1. Run '...'
+        2. See error '...'
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: Include log output or error messages if available.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: claudemd-guard version
+      description: Output of `claudemd-guard --version`
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      description: Output of `node --version`
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      description: e.g. macOS 14.5, Ubuntu 22.04
+    validations:
+      required: true
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Validation backend
+      options:
+        - Claude CLI (default)
+        - Anthropic API (CLAUDEMD_GUARD_API_KEY set)
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant environment variables
+      description: Any of CLAUDEMD_GUARD_MODEL, CLAUDEMD_GUARD_COOLDOWN, CLAUDEMD_GUARD_DISABLED, USE_SYSTEM_CLAUDE
