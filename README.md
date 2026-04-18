@@ -28,30 +28,12 @@ Prevents Claude Code from forgetting CLAUDE.md rules during long sessions caused
 
 ## Installation
 
-Via npm (recommended):
-
 ```bash
 npm install -g claudemd-guard
 claudemd-guard install
 ```
 
-Or via git clone:
-
-```bash
-git clone https://github.com/Hiro-Chiba/claudemd-guard.git
-cd claudemd-guard
-./install.sh
-```
-
-Restart Claude Code to activate.
-
-## Uninstallation
-
-```bash
-claudemd-guard uninstall
-# or, if installed via git clone:
-./uninstall.sh
-```
+Restart Claude Code to activate. To remove, run `claudemd-guard uninstall`.
 
 ## Configuration
 
