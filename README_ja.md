@@ -7,7 +7,7 @@
 
 Claude Code 用の AI 駆動型 CLAUDE.md エンフォーサー。
 
-[English](README.md) | 日本語 | [アーキテクチャ](docs/architecture_jp.md) | [npm リリース](https://www.npmjs.com/package/claudemd-guard)
+[English](README.md) | 日本語 | [アーキテクチャ](docs/architecture_jp.md)
 
 ---
 

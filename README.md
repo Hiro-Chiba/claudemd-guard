@@ -7,7 +7,7 @@
 
 AI-powered CLAUDE.md enforcer for Claude Code.
 
-English | [日本語](README_ja.md) | [Architecture](docs/architecture.md) | [Releases on npm](https://www.npmjs.com/package/claudemd-guard)
+English | [日本語](README_ja.md) | [Architecture](docs/architecture.md)
 
 ---
 
