@@ -13,8 +13,6 @@ Claude Code 用の AI 駆動型 CLAUDE.md エンフォーサー。
 
 Claude Code の長時間セッションで発生するコンテキスト圧縮による CLAUDE.md ルール忘れを防止。AI がツール操作を検証し、ルール違反をブロックします。
 
-npm で公開中: **[claudemd-guard](https://www.npmjs.com/package/claudemd-guard)**
-
 ## 特徴
 
 - CLAUDE.md ルールの AI 検証（ブロック方式）
@@ -72,15 +70,14 @@ claudemd-guard uninstall
 3. AI がルールとツール操作を照合して違反判定
 4. 違反あり → ブロック（操作中止）、違反なし → 素通し
 
-## 開発
+## 貢献
 
-```bash
-npm install
-npm run build    # ビルド
-npm test         # テスト実行
-npm run checks   # 型チェック + テスト
-```
+プルリクエストを歓迎します。開発セットアップ、コーディング規約、PR ワークフローは [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
+
+## 更新履歴
+
+リリース履歴は [CHANGELOG.md](CHANGELOG.md) を参照してください。
 
 ## ライセンス
 
-MIT
+[MIT](LICENSE)
