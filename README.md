@@ -13,8 +13,6 @@ English | [日本語](README_ja.md) | [Architecture](docs/architecture.md) | [Re
 
 Prevents Claude Code from forgetting CLAUDE.md rules during long sessions caused by context compression. AI validates every tool operation against your project rules and blocks violations.
 
-Available on npm: **[claudemd-guard](https://www.npmjs.com/package/claudemd-guard)**
-
 ## Features
 
 - AI validation of CLAUDE.md rules (block mode)
@@ -72,15 +70,14 @@ claudemd-guard uninstall
 3. AI checks the tool operation against the rules
 4. Violation found — operation blocked. No violation — operation proceeds.
 
-## Development
+## Contributing
 
-```bash
-npm install
-npm run build    # Build
-npm test         # Run tests
-npm run checks   # Typecheck + tests
-```
+Contributions are welcome. Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding conventions, and the pull request workflow.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for the release history.
 
 ## License
 
-MIT
+[MIT](LICENSE)
