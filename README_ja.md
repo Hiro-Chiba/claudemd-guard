@@ -7,11 +7,13 @@
 
 Claude Code 用の AI 駆動型 CLAUDE.md エンフォーサー。
 
-[English](README.md) | 日本語 | [アーキテクチャ](docs/architecture_jp.md)
+[English](README.md) | 日本語 | [アーキテクチャ](docs/architecture_jp.md) | [npm リリース](https://www.npmjs.com/package/claudemd-guard)
 
 ---
 
 Claude Code の長時間セッションで発生するコンテキスト圧縮による CLAUDE.md ルール忘れを防止。AI がツール操作を検証し、ルール違反をブロックします。
+
+npm で公開中: **[claudemd-guard](https://www.npmjs.com/package/claudemd-guard)**
 
 ## 特徴
 
