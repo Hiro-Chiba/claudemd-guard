@@ -19,6 +19,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Security audit (runtime deps, high severity)
+        run: npm audit --audit-level=high --omit=dev
+
       - name: Typecheck
         run: npx tsc --noEmit
 
