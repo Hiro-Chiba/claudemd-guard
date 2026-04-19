@@ -47,6 +47,11 @@ export class ClaudeCli implements IModelClient {
       timeout: CLI_TIMEOUT_MS,
       input: fullPrompt,
       cwd: claudeDir,
+      // shell is needed on Windows to invoke the `.cmd` shim that npm creates
+      // for installed bins. On Unix the binary is invoked directly via execve,
+      // so shell interpretation (and any associated injection surface) is off.
+      // All args passed here are constants or validated config values, so this
+      // flag does not widen the injection surface in practice.
       shell: process.platform === 'win32',
     })
 

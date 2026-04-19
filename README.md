@@ -52,6 +52,10 @@ Restart Claude Code to activate. To remove, run `claudemd-guard uninstall`.
 3. AI checks the tool operation against the rules
 4. Violation found — operation blocked. No violation — operation proceeds.
 
+## Network Access
+
+claudemd-guard only communicates with Anthropic endpoints — either directly via the Anthropic API (when `CLAUDEMD_GUARD_API_KEY` is set) or indirectly through the Claude CLI subprocess. It does not contact any other external services, and it does not send telemetry.
+
 ## Contributing
 
 Contributions are welcome. Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding conventions, and the pull request workflow.
