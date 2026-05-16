@@ -20,6 +20,14 @@ export type ConfigOptions = {
    * cost, so this is most useful when paired with `agent-gate daemon`.
    */
   useSdk?: boolean
+  /**
+   * Behavior when a rule or model client throws unexpectedly.
+   * - "allow" (default): swallow the error and let the operation through.
+   *   Optimized for developer ergonomics so flaky AI does not block work.
+   * - "block": turn the error into a block verdict. Recommended for
+   *   production / enterprise pipelines that prefer fail-closed safety.
+   */
+  onError?: 'allow' | 'block'
 }
 
 export class Config {
@@ -30,6 +38,7 @@ export class Config {
   readonly useSystemClaude: boolean
   readonly reasonLang: string | undefined
   readonly useSdk: boolean
+  readonly onError: 'allow' | 'block'
 
   constructor(options?: ConfigOptions) {
     this.model = options?.model ?? process.env.AGENT_GATE_MODEL ?? DEFAULT_MODEL
@@ -40,6 +49,10 @@ export class Config {
     this.useSystemClaude = options?.useSystemClaude ?? process.env.USE_SYSTEM_CLAUDE === 'true'
     this.reasonLang = options?.reasonLang ?? process.env.AGENT_GATE_REASON_LANG
     this.useSdk = options?.useSdk ?? process.env.AGENT_GATE_USE_SDK === '1'
+    const envOnError = process.env.AGENT_GATE_ON_ERROR
+    this.onError =
+      options?.onError ??
+      (envOnError === 'block' ? 'block' : 'allow')
   }
 
   get useApi(): boolean {

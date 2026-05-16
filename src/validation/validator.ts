@@ -8,11 +8,17 @@ interface ModelResponseJson {
   reason: string
 }
 
+export interface ValidatorOptions {
+  /** Fail-closed behavior on model client failures. Default: "allow". */
+  onError?: 'allow' | 'block'
+}
+
 export async function validator(
   rules: RuleSource[],
   toolName: string,
   toolInput: Record<string, unknown>,
-  modelClient: IModelClient
+  modelClient: IModelClient,
+  options?: ValidatorOptions
 ): Promise<ValidationResult> {
   try {
     const prompt = buildPrompt(rules, toolName, toolInput)
@@ -21,6 +27,12 @@ export async function validator(
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error'
+    if (options?.onError === 'block') {
+      return {
+        decision: 'block',
+        reason: `Validation failed (failing closed): ${errorMessage}`,
+      }
+    }
     return {
       decision: undefined,
       reason: `Validation error (allowing operation): ${errorMessage}`,

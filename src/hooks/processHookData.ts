@@ -146,7 +146,8 @@ export async function processHookData(
     toolName,
     toolInput,
     deterministicRules,
-    sessionContext
+    sessionContext,
+    { onError: config.onError }
   )
   if (ruleVerdict.kind === 'block') {
     bus.emit({
@@ -205,7 +206,9 @@ export async function processHookData(
     rulesCount: rules.length,
   })
   const aiStart = Date.now()
-  const result = await validate(rules, toolName, toolInput, modelClient)
+  const result = await validate(rules, toolName, toolInput, modelClient, {
+    onError: config.onError,
+  })
   const aiLatency = Date.now() - aiStart
 
   // Update cooldown timestamp AFTER successful validation

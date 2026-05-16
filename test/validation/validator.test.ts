@@ -85,6 +85,26 @@ describe('validator', () => {
     expect(result.reason).toContain('Connection failed')
   })
 
+  it('blocks operation when model client throws and onError is "block"', async () => {
+    const client: IModelClient = {
+      ask: async () => {
+        throw new Error('Connection failed')
+      },
+    }
+
+    const result = await validator(
+      sampleClaudeMdFiles,
+      'Edit',
+      { file_path: '/project/src/app.ts' },
+      client,
+      { onError: 'block' }
+    )
+
+    expect(result.decision).toBe('block')
+    expect(result.reason).toMatch(/failing closed|failed/i)
+    expect(result.reason).toContain('Connection failed')
+  })
+
   it('handles response with extra text around JSON', async () => {
     const client = createMockClient(
       'Here is my analysis:\n{"decision": "block", "reason": "Violates rule #1"}\nEnd.'

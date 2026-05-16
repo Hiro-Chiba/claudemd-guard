@@ -88,6 +88,7 @@ Full options: see [docs/config.md](docs/config.md) (TODO) or `AgentGatePluginCon
 | `AGENT_GATE_LOG` | `1` writes decisions to `~/.agent-gate/log.jsonl` |
 | `AGENT_GATE_API_KEY` | Use Anthropic API directly instead of `claude` CLI |
 | `AGENT_GATE_USE_SDK` | `1` prefers the Anthropic agent SDK over API/CLI (no API key needed; works best with daemon mode) |
+| `AGENT_GATE_ON_ERROR` | `block` to fail-closed when a rule or AI client throws (default `allow`) |
 | `AGENT_GATE_DAEMON` | `1` routes through the daemon if it is running |
 
 ## Supported AI tools
