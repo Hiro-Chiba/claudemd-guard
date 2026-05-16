@@ -2,25 +2,33 @@
 
 [![CI](https://github.com/Hiro-Chiba/agent-gate/actions/workflows/ci.yml/badge.svg)](https://github.com/Hiro-Chiba/agent-gate/actions/workflows/ci.yml)
 
-AI-powered CLAUDE.md enforcer for Claude Code.
+One natural-language rule source, enforced at runtime across multiple AI coding tools.
 
----
+agent-gate reads the instruction files you already have (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.cursor/rules/*.mdc`, `.clinerules`, `.windsurf/rules`, `.github/copilot-instructions.md`, `CONVENTIONS.md`) as a single combined rule set, then enforces them at hook time in Claude Code and Cursor. A deterministic safety baseline catches catastrophic operations before any AI call.
 
-Prevents Claude Code from forgetting CLAUDE.md rules during long sessions caused by context compression. AI validates every tool operation against your project rules and blocks violations.
+## Why
+
+The AI coding tool landscape in 2026 has fragmented into many tools, each with its own instruction file format. Existing tooling either syncs rule files across tools (rulesync, symlinks) or enforces a single rule format at runtime (probity, tdd-guard), but not both. agent-gate sits in the gap: it accepts whatever natural-language instruction files you already maintain and enforces them across multiple AI tools through a single hook.
+
+Two pain points the project is built to address:
+
+- **Rule forgetting** in long agent sessions, where context compression drops the rules from the prompt and the agent quietly drifts off-spec.
+- **Destructive operations** like `rm -rf $HOME` or force-pushing main, which AI judgment is too unreliable to catch consistently.
 
 ## Features
 
-- Deterministic safety baseline that fires before any AI call (recursive rm on catastrophic paths, writes to secret files, force push to protected branches)
-- AI validation of CLAUDE.md rules (block mode)
-- Uses Claude CLI by default (no additional API key required)
-- Anthropic API direct call also supported
-- Automatic CLAUDE.md collection (upward + downward directory walk)
-- Optional cooldown between AI validations
+- Multi-source rule collection across 8 instruction file formats, surfaced to AI with per-source attribution.
+- Adapter pattern: same binary works in Claude Code (`--agent claude-code`, default) and Cursor 1.7 (`--agent cursor`).
+- Deterministic safety baseline with five built-in rules that fire before any AI call.
+- AI validation against the combined rule set when the safety baseline passes.
+- Per-rule disable and per-project customization via `.agent-gate.json` and `AGENT_GATE_DISABLED_RULES`.
+- Optional decision log (`AGENT_GATE_LOG=1`) and `agent-gate stats` for auditing.
+- Block reasons are guidance, not denials: the AI is instructed to describe the next correct step alongside the violated rule.
 
 ## Requirements
 
 - Node.js >= 22.0.0
-- Claude Code (CLI) installed
+- Claude Code or Cursor 1.7
 
 ## Installation
 
@@ -30,9 +38,9 @@ cd agent-gate
 ./install.sh
 ```
 
-The install script handles dependency install, build, and hook registration. Restart Claude Code to activate.
+The install script handles dependency install, build, and Claude Code hook registration. Restart Claude Code to activate.
 
-To remove the hook, run `./uninstall.sh` from the same directory.
+To register against Cursor instead of Claude Code, run the binary with `--agent cursor` from your Cursor hook config. To remove the Claude Code hook, run `./uninstall.sh`.
 
 ## Configuration
 
@@ -40,16 +48,17 @@ To remove the hook, run `./uninstall.sh` from the same directory.
 
 | Variable | Default | Description |
 |---|---|---|
-| `AGENT_GATE_MODEL` | `claude-sonnet-4-6` | Model used for validation |
-| `AGENT_GATE_API_KEY` | — | Anthropic API key (uses API directly when set) |
-| `AGENT_GATE_COOLDOWN` | `0` | Cooldown in seconds (0 = validate every time) |
-| `AGENT_GATE_DISABLED` | `false` | Disable the whole tool |
-| `AGENT_GATE_DISABLED_RULES` | — | Comma-separated rule ids to disable, merged with the config file |
-| `USE_SYSTEM_CLAUDE` | `false` | `true` forces PATH claude (default: `~/.claude/local/claude`, falls back to PATH if not found) |
+| `AGENT_GATE_MODEL` | `claude-sonnet-4-6` | Model used for AI validation |
+| `AGENT_GATE_API_KEY` | (none) | Anthropic API key. Uses the API directly when set; otherwise spawns the Claude CLI |
+| `AGENT_GATE_COOLDOWN` | `0` | Cooldown in seconds between AI validations (deterministic rules always fire) |
+| `AGENT_GATE_DISABLED` | `false` | Set to `true` to disable the whole tool |
+| `AGENT_GATE_DISABLED_RULES` | (none) | Comma-separated rule ids to disable, merged with the config file |
+| `AGENT_GATE_LOG` | (none) | Set to `1` to append decisions to `~/.agent-gate/log.jsonl` |
+| `USE_SYSTEM_CLAUDE` | `false` | `true` forces PATH `claude` (default: `~/.claude/local/claude` with PATH fallback) |
 
 ### Project config file: `.agent-gate.json`
 
-Place an `.agent-gate.json` in the project root (or any parent directory) to customize the deterministic baseline.
+Place an `.agent-gate.json` at the project root (or any parent directory) to customize the deterministic baseline.
 
 ```json
 {
@@ -63,37 +72,62 @@ Place an `.agent-gate.json` in the project root (or any parent directory) to cus
 |---|---|
 | `disabled_rules` | List of rule ids that will not run. Merged with `AGENT_GATE_DISABLED_RULES`. |
 | `protected_branches` | Overrides the default list used by `prevent-force-push-main`. |
-| `extra_secret_paths` | Additional path substrings treated as secret targets by `prevent-secret-file-write` (alongside the built-in list). |
+| `extra_secret_paths` | Additional path substrings treated as secret targets by `prevent-secret-file-write`. |
+
+## How It Works
+
+1. The AI coding tool fires a pre-tool-use hook with its vendor-specific JSON payload.
+2. The selected adapter parses that payload into a normalized `Action`.
+3. Deterministic safety rules run first. Catastrophic patterns are blocked here without calling AI.
+4. If the safety baseline passes, agent-gate collects all 8 instruction file formats present in the project tree.
+5. The AI validates the operation against the combined rule set, with each source attributed by kind.
+6. The verdict (block + guidance, or allow) is returned through the adapter's response formatter.
+
+## Built-in Safety Rules
+
+| Rule | Blocks |
+|---|---|
+| `prevent-rm-rf-root` | Recursive `rm` on `/`, `$HOME`, `~`, `/etc`, `/usr`, `/var`, and other catastrophic paths. Handles `sudo` prefix and flag variants (`-rf`, `-fr`, `-Rf`). |
+| `prevent-secret-file-write` | `Edit`/`Write` on `.env*` (non-template), `.ssh/*`, `.aws/credentials`, `*.pem`, `*.key`, `id_rsa`, `.netrc`. |
+| `prevent-bash-secret-write` | Shell redirects to the same secret paths via `>`, `>>`, or `tee`. |
+| `prevent-force-push-main` | `git push --force` or `-f` to `main`, `master`, `develop`, `production`, `release`, `stable`. Allows `--force-with-lease`. |
+| `prevent-system-path-write` | `Edit`/`Write` to `/etc`, `/usr`, `/var`, `/System`, `/Library`, `/opt`, and other system-owned paths. |
+
+Each rule can be disabled individually through `.agent-gate.json` or the env var.
+
+## Supported Instruction File Formats
+
+agent-gate aggregates rules from any combination of:
+
+- `CLAUDE.md` (Claude Code)
+- `AGENTS.md` (cross-tool spec backed by the Linux Foundation Agentic AI Foundation)
+- `.cursorrules` (Cursor legacy)
+- `.cursor/rules/*.mdc` (Cursor current)
+- `.clinerules/*.md` (Cline)
+- `.windsurf/rules/*.md` (Windsurf)
+- `.github/copilot-instructions.md` (GitHub Copilot)
+- `CONVENTIONS.md` (Aider)
+
+You do not need to choose. Maintain whichever file your team already uses; agent-gate reads them all.
+
+## Supported AI Coding Tools
+
+agent-gate enforces in any tool that exposes a pre-tool-use hook. As of v1:
+
+- Claude Code (mature). `agent-gate --agent claude-code`, the default.
+- Cursor 1.7 (beta). `agent-gate --agent cursor`. Payload mapping is best-effort against public docs.
+
+Tools without a hook surface (Copilot, Cline, Aider, Codex web, Replit, Devin) can still benefit from agent-gate as a rule source linter or via downstream sync (rulesync, symlinks), but cannot be enforced at runtime.
 
 ## Observability
 
 Set `AGENT_GATE_LOG=1` to append every decision to `~/.agent-gate/log.jsonl`. Each line is a JSON object with timestamp, adapter, tool, decision, reason, source (`deterministic` / `ai`), and `ruleId` when a deterministic rule fired.
 
-Run `agent-gate stats` to summarize: total decisions, block percentage, breakdown by source / adapter / tool / rule id. Useful for tuning the rule set after a few days of real use.
-
-## How It Works
-
-1. Claude Code attempts to run `Edit`/`Write`/`Bash`, and the PreToolUse hook fires.
-2. Deterministic safety rules run first. Catastrophic patterns (`rm -rf /`, writes to `.env` or `.ssh/*`, `git push --force` on `main`, etc.) are blocked here without calling AI.
-3. If the safety baseline passes, agent-gate collects `CLAUDE.md` files from the project.
-4. AI validates the operation against those rules.
-5. Violation found, operation blocked. No violation, operation proceeds.
-
-## Built-in Safety Rules
-
-These run by default with no configuration required.
-
-| Rule | Blocks |
-|---|---|
-| `prevent-rm-rf-root` | Recursive `rm` on `/`, `$HOME`, `~`, `/etc`, `/usr`, `/var`, and other catastrophic paths. Handles `sudo` prefix and flag variants (`-rf`, `-fr`, `-Rf`). |
-| `prevent-secret-file-write` | `Edit`/`Write` on `.env*` (non-template), `.ssh/*`, `.aws/credentials`, `*.pem`, `*.key`, `id_rsa`, `.netrc`, etc. |
-| `prevent-bash-secret-write` | Shell redirects to the same secret paths via `>`, `>>`, or `tee`. Catches `echo X > .env`, `cat > ~/.ssh/id_rsa`. |
-| `prevent-force-push-main` | `git push --force` or `-f` to `main`, `master`, `develop`, `production`, `release`, `stable`. Allows `--force-with-lease`. |
-| `prevent-system-path-write` | `Edit`/`Write` to `/etc`, `/usr`, `/var`, `/System`, `/Library`, `/opt`, and other system-owned paths. |
+Run `agent-gate stats` for a summary: total decisions, block percentage, breakdown by source, adapter, tool, and rule id.
 
 ## Network Access
 
-agent-gate only communicates with Anthropic endpoints, either directly via the Anthropic API (when `AGENT_GATE_API_KEY` is set) or indirectly through the Claude CLI subprocess. It does not contact any other external services, and it does not send telemetry.
+agent-gate only communicates with Anthropic endpoints, either directly via the Anthropic API (when `AGENT_GATE_API_KEY` is set) or indirectly through the Claude CLI subprocess. It does not contact any other external services and does not send telemetry. Deterministic rules run entirely locally.
 
 ## License
 
