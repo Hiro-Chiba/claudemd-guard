@@ -1,5 +1,5 @@
 import { ValidationResult } from '../contracts/types/ValidationResult'
-import { ClaudeMdFile } from '../contracts/types/ClaudeMdFile'
+import { RuleSource } from '../contracts/types/RuleSource'
 import { IModelClient } from '../contracts/types/ModelClient'
 import { buildPrompt } from './prompts/context'
 
@@ -9,13 +9,13 @@ interface ModelResponseJson {
 }
 
 export async function validator(
-  claudeMdFiles: ClaudeMdFile[],
+  rules: RuleSource[],
   toolName: string,
   toolInput: Record<string, unknown>,
   modelClient: IModelClient
 ): Promise<ValidationResult> {
   try {
-    const prompt = buildPrompt(claudeMdFiles, toolName, toolInput)
+    const prompt = buildPrompt(rules, toolName, toolInput)
     const response = await modelClient.ask(prompt)
     return parseModelResponse(response)
   } catch (error) {

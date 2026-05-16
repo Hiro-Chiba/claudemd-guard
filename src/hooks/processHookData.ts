@@ -4,9 +4,9 @@ import { join } from 'path'
 import { tmpdir } from 'os'
 import { HookDataSchema } from '../contracts/schemas/hookDataSchema'
 import { ValidationResult } from '../contracts/types/ValidationResult'
-import { ClaudeMdFile } from '../contracts/types/ClaudeMdFile'
+import { RuleSource } from '../contracts/types/RuleSource'
 import { IModelClient } from '../contracts/types/ModelClient'
-import { collectClaudeMd } from '../collector/collectClaudeMd'
+import { collectRuleSources } from '../collector/collectRuleSources'
 import { validator } from '../validation/validator'
 import { Config } from '../config/Config'
 import { ClaudeCli } from '../validation/models/ClaudeCli'
@@ -52,7 +52,7 @@ class FileCooldownStore implements CooldownStore {
 
 export interface ProcessHookDataDeps {
   config?: Config
-  collectFn?: (cwd: string) => ClaudeMdFile[]
+  collectFn?: (cwd: string) => RuleSource[]
   validatorFn?: typeof validator
   getModelClient?: (config: Config) => IModelClient
   cooldownStore?: CooldownStore
@@ -99,8 +99,13 @@ export async function processHookData(
   // any cooldown or AI check. These rules catch catastrophic patterns
   // (rm -rf root, writes to secret stores, etc.) and short-circuit
   // the rest of the pipeline.
-  const rules = deps?.deterministicRules ?? defaultDeterministicRules
-  const ruleVerdict = runDeterministicRules(toolName, toolInput, rules)
+  const deterministicRules =
+    deps?.deterministicRules ?? defaultDeterministicRules
+  const ruleVerdict = runDeterministicRules(
+    toolName,
+    toolInput,
+    deterministicRules
+  )
   if (ruleVerdict.kind === 'block') {
     return { decision: 'block', reason: ruleVerdict.reason }
   }
@@ -120,21 +125,22 @@ export async function processHookData(
     }
   }
 
-  // Collect CLAUDE.md files
-  const collect = deps?.collectFn ?? collectClaudeMd
-  const claudeMdFiles = collect(cwd)
+  // Collect rule sources (CLAUDE.md, AGENTS.md, .cursorrules, ...)
+  const collect = deps?.collectFn ?? collectRuleSources
+  const rules = collect(cwd)
 
-  if (claudeMdFiles.length === 0) {
+  if (rules.length === 0) {
     return PASS
   }
 
   // Get model client
-  const getClient = deps?.getModelClient ?? ((c: Config) => createModelClient(c, cwd))
+  const getClient =
+    deps?.getModelClient ?? ((c: Config) => createModelClient(c, cwd))
   const modelClient = getClient(config)
 
   // Validate
   const validate = deps?.validatorFn ?? validator
-  const result = await validate(claudeMdFiles, toolName, toolInput, modelClient)
+  const result = await validate(rules, toolName, toolInput, modelClient)
 
   // Update cooldown timestamp AFTER successful validation
   if (cooldownStore) {

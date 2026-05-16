@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { validator } from '../../src/validation/validator'
 import { IModelClient } from '../../src/contracts/types/ModelClient'
-import { ClaudeMdFile } from '../../src/contracts/types/ClaudeMdFile'
+import { RuleSource } from '../../src/contracts/types/RuleSource'
 
 function createMockClient(response: string): IModelClient {
   return {
@@ -9,10 +9,11 @@ function createMockClient(response: string): IModelClient {
   }
 }
 
-const sampleClaudeMdFiles: ClaudeMdFile[] = [
+const sampleClaudeMdFiles: RuleSource[] = [
   {
     path: '/project/CLAUDE.md',
     content: '# Rules\n- Do not delete production files',
+    kind: 'claude-md',
   },
 ]
 

@@ -4,19 +4,23 @@ import {
   CooldownStore,
 } from '../../src/hooks/processHookData'
 import { Config } from '../../src/config/Config'
-import { ClaudeMdFile } from '../../src/contracts/types/ClaudeMdFile'
+import { RuleSource } from '../../src/contracts/types/RuleSource'
 import { ValidationResult } from '../../src/contracts/types/ValidationResult'
 import { IModelClient } from '../../src/contracts/types/ModelClient'
 import { DeterministicRule } from '../../src/deterministic/types'
 
-const sampleClaudeMdFiles: ClaudeMdFile[] = [
-  { path: '/project/CLAUDE.md', content: '# Rules\n- No deleting files' },
+const sampleClaudeMdFiles: RuleSource[] = [
+  {
+    path: '/project/CLAUDE.md',
+    content: '# Rules\n- No deleting files',
+    kind: 'claude-md',
+  },
 ]
 
 function createMockValidator(
   result: ValidationResult
 ): (
-  files: ClaudeMdFile[],
+  files: RuleSource[],
   toolName: string,
   toolInput: Record<string, unknown>,
   client: IModelClient
