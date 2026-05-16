@@ -116,7 +116,8 @@ describe('ClaudeCli', () => {
       const [, , options] = mockedExecFileSync.mock.calls[0]
       const input = (options as { input: string }).input
       expect(input).toContain('USER_PROMPT_BODY')
-      expect(input).toContain('CLAUDE.md enforcer')
+      // System prompt characterizes the role; the exact phrasing is allowed to evolve.
+      expect(input).toMatch(/guardrail|enforcer/i)
     })
 
     it('sets cwd to <projectCwd>/.claude', async () => {

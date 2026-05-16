@@ -26,13 +26,17 @@ describe('runDeterministicRules', () => {
     expect(verdict).toEqual({ kind: 'allow' })
   })
 
-  it('returns the first block verdict encountered', () => {
+  it('returns the first block verdict encountered with the rule id', () => {
     const verdict = runDeterministicRules('Bash', { command: 'ls' }, [
       allowRule,
       blockRule('first-block', 'first reason'),
       blockRule('second-block', 'second reason'),
     ])
-    expect(verdict).toEqual({ kind: 'block', reason: 'first reason' })
+    expect(verdict).toEqual({
+      kind: 'block',
+      reason: 'first reason',
+      ruleId: 'first-block',
+    })
   })
 
   it('short-circuits: rules after the first block are not consulted', () => {

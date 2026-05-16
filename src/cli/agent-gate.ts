@@ -15,6 +15,8 @@ import {
   DEFAULT_ADAPTER_ID,
 } from '../adapters'
 import { Adapter } from '../adapters/Adapter'
+import { readStats, formatStats } from '../observability/stats'
+import { defaultLogPath } from '../observability/decisionLogger'
 
 const HELP_TEXT = `agent-gate — runtime enforcer for AI coding agent rules
 
@@ -23,6 +25,7 @@ Usage:
   agent-gate --agent <id>           Use the named adapter (default: claude-code)
   agent-gate install                Register the hook in ~/.claude/settings.json
   agent-gate uninstall              Remove the hook from ~/.claude/settings.json
+  agent-gate stats                  Summarize decisions from the log file
   agent-gate --help                 Show this help
   agent-gate --version              Show version
 
@@ -30,11 +33,13 @@ Adapters (use with --agent):
   ${availableAdapterIds().join(', ')}
 
 Environment:
-  AGENT_GATE_MODEL        Validation model (default: claude-sonnet-4-6)
-  AGENT_GATE_API_KEY      Use Anthropic API directly when set
-  AGENT_GATE_COOLDOWN     Cooldown in seconds between validations (default: 0)
-  AGENT_GATE_DISABLED     Set to "true" to disable the hook
-  USE_SYSTEM_CLAUDE       Set to "true" to force PATH claude binary
+  AGENT_GATE_MODEL              Validation model (default: claude-sonnet-4-6)
+  AGENT_GATE_API_KEY            Use Anthropic API directly when set
+  AGENT_GATE_COOLDOWN           Cooldown in seconds between AI validations
+  AGENT_GATE_DISABLED           Set to "true" to disable the whole tool
+  AGENT_GATE_DISABLED_RULES     Comma-separated rule ids to disable
+  AGENT_GATE_LOG                Set to "1" to write decisions to ~/.agent-gate/log.jsonl
+  USE_SYSTEM_CLAUDE             Set to "true" to force PATH claude binary
 `
 
 export async function run(
@@ -172,11 +177,19 @@ function main(): void {
     case 'uninstall':
       runUninstall()
       return
+    case 'stats':
+      runStats()
+      return
     default:
       console.error(`Unknown subcommand: ${subcommand}`)
       console.error(HELP_TEXT)
       process.exit(1)
   }
+}
+
+function runStats(): void {
+  const stats = readStats(defaultLogPath())
+  console.log(formatStats(stats))
 }
 
 if (require.main === module) {

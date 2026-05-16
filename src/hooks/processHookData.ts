@@ -19,6 +19,13 @@ import {
   AgentGateConfig,
   loadAgentGateConfig,
 } from '../config/AgentGateConfig'
+import {
+  appendDecision,
+  defaultLogPath,
+  isLoggingEnabled,
+  DecisionLogEntry,
+  DecisionSource,
+} from '../observability/decisionLogger'
 
 const PASS: ValidationResult = { decision: undefined, reason: '' }
 const COOLDOWN_DIR_NAME = 'agent-gate'
@@ -64,6 +71,28 @@ export interface ProcessHookDataDeps {
   cwd?: string
   deterministicRules?: DeterministicRule[]
   adapter?: Adapter
+  /** Override logging behavior. When provided, replaces env detection. */
+  logging?: { enabled: boolean; path?: string }
+}
+
+function maybeLog(
+  deps: ProcessHookDataDeps | undefined,
+  entry: Omit<DecisionLogEntry, 'timestamp'>
+): void {
+  const enabled = deps?.logging
+    ? deps.logging.enabled
+    : isLoggingEnabled()
+  if (!enabled) return
+  const path = deps?.logging?.path ?? defaultLogPath()
+  const full: DecisionLogEntry = {
+    timestamp: new Date().toISOString(),
+    ...entry,
+  }
+  try {
+    appendDecision(full, path)
+  } catch {
+    // Logging failures must never block the hook pipeline.
+  }
 }
 
 export async function processHookData(
@@ -88,9 +117,7 @@ export async function processHookData(
   const agentGateConfig = deps?.agentGateConfig ?? loadAgentGateConfig(cwd)
 
   // Deterministic rules: a fast, cheap safety baseline that runs before
-  // any cooldown or AI check. These rules catch catastrophic patterns
-  // (rm -rf root, writes to secret stores, etc.) and short-circuit
-  // the rest of the pipeline.
+  // any cooldown or AI check.
   const deterministicRules =
     deps?.deterministicRules ??
     buildDefaultDeterministicRules(agentGateConfig)
@@ -100,6 +127,14 @@ export async function processHookData(
     deterministicRules
   )
   if (ruleVerdict.kind === 'block') {
+    maybeLog(deps, {
+      adapter: adapter.id,
+      toolName,
+      decision: 'block',
+      reason: ruleVerdict.reason,
+      source: 'deterministic',
+      ruleId: ruleVerdict.ruleId,
+    })
     return { decision: 'block', reason: ruleVerdict.reason }
   }
 
@@ -138,6 +173,15 @@ export async function processHookData(
   if (cooldownStore) {
     cooldownStore.setLastTime(cwd, Math.floor(Date.now() / 1000))
   }
+
+  const source: DecisionSource = 'ai'
+  maybeLog(deps, {
+    adapter: adapter.id,
+    toolName,
+    decision: result.decision === 'block' ? 'block' : 'allow',
+    reason: result.reason,
+    source,
+  })
 
   return result
 }

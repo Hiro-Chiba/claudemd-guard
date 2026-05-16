@@ -65,6 +65,12 @@ Place an `.agent-gate.json` in the project root (or any parent directory) to cus
 | `protected_branches` | Overrides the default list used by `prevent-force-push-main`. |
 | `extra_secret_paths` | Additional path substrings treated as secret targets by `prevent-secret-file-write` (alongside the built-in list). |
 
+## Observability
+
+Set `AGENT_GATE_LOG=1` to append every decision to `~/.agent-gate/log.jsonl`. Each line is a JSON object with timestamp, adapter, tool, decision, reason, source (`deterministic` / `ai`), and `ruleId` when a deterministic rule fired.
+
+Run `agent-gate stats` to summarize: total decisions, block percentage, breakdown by source / adapter / tool / rule id. Useful for tuning the rule set after a few days of real use.
+
 ## How It Works
 
 1. Claude Code attempts to run `Edit`/`Write`/`Bash`, and the PreToolUse hook fires.
