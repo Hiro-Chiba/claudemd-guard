@@ -10,6 +10,7 @@ import { validator } from '../validation/validator'
 import { Config } from '../config/Config'
 import { ClaudeCli } from '../validation/models/ClaudeCli'
 import { AnthropicApi } from '../validation/models/AnthropicApi'
+import { CompositeModelClient } from '../validation/models/CompositeModelClient'
 import { DeterministicRule } from '../deterministic/types'
 import { runDeterministicRules } from '../deterministic/engine'
 import { buildDefaultDeterministicRules } from '../deterministic/defaultRules'
@@ -235,8 +236,17 @@ export async function processHookData(
 }
 
 function createModelClient(config: Config, cwd: string): IModelClient {
+  // Build a fallback chain: the most-preferred client comes first, with
+  // ClaudeCli as a secondary path. The CompositeModelClient tries each in
+  // order; if the first fails, the next runs. The validator's outer
+  // try/catch fail-opens when every client has failed.
+  const clients: IModelClient[] = []
   if (config.useApi) {
-    return new AnthropicApi(config)
+    clients.push(new AnthropicApi(config))
   }
-  return new ClaudeCli(config, cwd)
+  clients.push(new ClaudeCli(config, cwd))
+  if (clients.length === 1) {
+    return clients[0]
+  }
+  return new CompositeModelClient(clients)
 }
