@@ -2,12 +2,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-DIST_ENTRY="${SCRIPT_DIR}/dist/cli/claudemd-guard.js"
+DIST_ENTRY="${SCRIPT_DIR}/dist/cli/claudegate.js"
 
-echo "=== claudemd-guard installer (git-clone mode) ==="
+echo "=== claudegate installer (git-clone mode) ==="
 echo ""
-echo "Note: if you installed via 'npm install -g claudemd-guard',"
-echo "you can run 'claudemd-guard install' directly instead of this script."
+echo "Note: if you installed via 'npm install -g claudegate',"
+echo "you can run 'claudegate install' directly instead of this script."
 echo ""
 
 cd "$SCRIPT_DIR"

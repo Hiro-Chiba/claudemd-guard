@@ -13,7 +13,7 @@ First public release on npm. Reflects the TypeScript implementation and subcomma
 
 ### Added
 
-- npm distribution via `npm install -g claudemd-guard`
+- npm distribution via `npm install -g claudegate`
 - CLI subcommands: `install`, `uninstall`, `--help`, `--version`
 - `ClaudeCli` test coverage (binary resolution, argument construction, response parsing)
 - `installer` module with unit tests (12 cases)

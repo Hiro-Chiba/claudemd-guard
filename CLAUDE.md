@@ -1,4 +1,4 @@
-# claudemd-guard
+# claudegate
 
 ## Project Goal
 

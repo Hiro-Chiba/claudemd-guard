@@ -1,12 +1,12 @@
 {
-  "name": "claudemd-guard",
+  "name": "claudegate",
   "version": "1.0.0",
   "description": "AI-powered CLAUDE.md enforcer for Claude Code hooks",
   "author": "Hiro-Chiba",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Hiro-Chiba/claudemd-guard.git"
+    "url": "git+https://github.com/Hiro-Chiba/claudegate.git"
   },
   "keywords": [
     "claude",
@@ -22,7 +22,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "claudemd-guard": "dist/cli/claudemd-guard.js"
+    "claudegate": "dist/cli/claudegate.js"
   },
   "files": [
     "dist",

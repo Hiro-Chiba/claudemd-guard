@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a reproducible problem with claudemd-guard
+description: Report a reproducible problem with claudegate
 title: "[Bug] <short description>"
 labels: ["bug"]
 body:
@@ -8,7 +8,7 @@ body:
       value: |
         Thanks for taking the time to file a bug report. Please fill out the sections below so we can reproduce the issue quickly.
 
-        For security-related issues, please do NOT use this template. See [SECURITY.md](https://github.com/Hiro-Chiba/claudemd-guard/blob/main/SECURITY.md) instead.
+        For security-related issues, please do NOT use this template. See [SECURITY.md](https://github.com/Hiro-Chiba/claudegate/blob/main/SECURITY.md) instead.
   - type: textarea
     id: summary
     attributes:
@@ -42,8 +42,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: claudemd-guard version
-      description: Output of `claudemd-guard --version`
+      label: claudegate version
+      description: Output of `claudegate --version`
     validations:
       required: true
   - type: input
@@ -66,11 +66,11 @@ body:
       label: Validation backend
       options:
         - Claude CLI (default)
-        - Anthropic API (CLAUDEMD_GUARD_API_KEY set)
+        - Anthropic API (CLAUDEGATE_API_KEY set)
     validations:
       required: true
   - type: textarea
     id: config
     attributes:
       label: Relevant environment variables
-      description: Any of CLAUDEMD_GUARD_MODEL, CLAUDEMD_GUARD_COOLDOWN, CLAUDEMD_GUARD_DISABLED, USE_SYSTEM_CLAUDE
+      description: Any of CLAUDEGATE_MODEL, CLAUDEGATE_COOLDOWN, CLAUDEGATE_DISABLED, USE_SYSTEM_CLAUDE

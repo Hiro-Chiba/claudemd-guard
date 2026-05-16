@@ -16,11 +16,11 @@ export class Config {
   readonly useSystemClaude: boolean
 
   constructor(options?: ConfigOptions) {
-    this.model = options?.model ?? process.env.CLAUDEMD_GUARD_MODEL ?? DEFAULT_MODEL
-    this.apiKey = options?.apiKey ?? process.env.CLAUDEMD_GUARD_API_KEY
-    const parsedCooldown = parseInt(process.env.CLAUDEMD_GUARD_COOLDOWN ?? '0', 10)
+    this.model = options?.model ?? process.env.CLAUDEGATE_MODEL ?? DEFAULT_MODEL
+    this.apiKey = options?.apiKey ?? process.env.CLAUDEGATE_API_KEY
+    const parsedCooldown = parseInt(process.env.CLAUDEGATE_COOLDOWN ?? '0', 10)
     this.cooldown = options?.cooldown ?? (Number.isNaN(parsedCooldown) ? 0 : parsedCooldown)
-    this.disabled = options?.disabled ?? process.env.CLAUDEMD_GUARD_DISABLED === 'true'
+    this.disabled = options?.disabled ?? process.env.CLAUDEGATE_DISABLED === 'true'
     this.useSystemClaude = options?.useSystemClaude ?? process.env.USE_SYSTEM_CLAUDE === 'true'
   }
 

@@ -2,7 +2,7 @@
 
 ## 概要
 
-claudemd-guard v2 は Claude Code の PreToolUse フックとして動作する TypeScript アプリケーション。
+claudegate v2 は Claude Code の PreToolUse フックとして動作する TypeScript アプリケーション。
 `Edit`/`Write`/`Bash` ツール実行前に発火し、CLAUDE.md のルールに対して AI 検証を行い、違反操作をブロックする。
 
 ## フック動作フロー
@@ -10,7 +10,7 @@ claudemd-guard v2 は Claude Code の PreToolUse フックとして動作する 
 ```mermaid
 sequenceDiagram
     participant CC as Claude Code
-    participant Hook as claudemd-guard
+    participant Hook as claudegate
     participant FS as ファイルシステム
     participant AI as AIモデル
 
@@ -38,7 +38,7 @@ sequenceDiagram
 ```mermaid
 graph TD
     subgraph CLI ["CLIエントリポイント"]
-        A[cli/claudemd-guard.ts<br/>stdin → 処理 → stdout]
+        A[cli/claudegate.ts<br/>stdin → 処理 → stdout]
     end
 
     subgraph Core ["コア"]
@@ -101,7 +101,7 @@ graph LR
 
 ```mermaid
 flowchart TD
-    Start[開始] --> CheckAPI{CLAUDEMD_GUARD_API_KEY<br/>設定済み?}
+    Start[開始] --> CheckAPI{CLAUDEGATE_API_KEY<br/>設定済み?}
     CheckAPI -->|Yes| API[AnthropicApi<br/>API直接呼び出し]
     CheckAPI -->|No| CheckSystem{USE_SYSTEM_CLAUDE<br/>= true?}
     CheckSystem -->|Yes| PATH[PATH上の claude]
@@ -145,10 +145,10 @@ flowchart TD
 
 | 変数名 | デフォルト | 説明 |
 |---|---|---|
-| `CLAUDEMD_GUARD_MODEL` | `claude-sonnet-4-6` | 検証モデル |
-| `CLAUDEMD_GUARD_API_KEY` | — | Anthropic APIキー |
-| `CLAUDEMD_GUARD_COOLDOWN` | `0` | クールダウン秒数 |
-| `CLAUDEMD_GUARD_DISABLED` | `false` | 無効化フラグ |
+| `CLAUDEGATE_MODEL` | `claude-sonnet-4-6` | 検証モデル |
+| `CLAUDEGATE_API_KEY` | — | Anthropic APIキー |
+| `CLAUDEGATE_COOLDOWN` | `0` | クールダウン秒数 |
+| `CLAUDEGATE_DISABLED` | `false` | 無効化フラグ |
 | `USE_SYSTEM_CLAUDE` | `false` | `true`でPATH上のclaudeを強制使用（デフォルトは~/.claude/local/claude → PATHフォールバック） |
 
 ## インストール構成
@@ -157,5 +157,5 @@ flowchart TD
 ~/.claude/settings.json
 └── hooks.PreToolUse[]
     └── matcher: "Edit|Write|Bash"
-        └── command: "node /path/to/claudemd-guard/dist/cli/claudemd-guard.js"
+        └── command: "node /path/to/claudegate/dist/cli/claudegate.js"
 ```

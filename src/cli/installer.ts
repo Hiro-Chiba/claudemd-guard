@@ -28,7 +28,7 @@ export function defaultSettingsPath(): string {
 
 export function resolveHookCommand(resolvedScriptPath: string): string {
   if (!resolvedScriptPath) {
-    return 'claudemd-guard'
+    return 'claudegate'
   }
   return `node ${resolvedScriptPath}`
 }
@@ -49,9 +49,9 @@ function writeSettings(settingsFile: string, settings: ClaudeSettings): void {
   writeFileSync(settingsFile, JSON.stringify(settings, null, 2) + '\n')
 }
 
-function isClaudemdGuardEntry(entry: HookMatcherEntry): boolean {
+function isClaudegateEntry(entry: HookMatcherEntry): boolean {
   return (entry.hooks ?? []).some(
-    (h) => typeof h.command === 'string' && h.command.includes('claudemd-guard')
+    (h) => typeof h.command === 'string' && h.command.includes('claudegate')
   )
 }
 
@@ -65,7 +65,7 @@ export function installHook(
   if (!settings.hooks) settings.hooks = {}
   const preToolUse = settings.hooks.PreToolUse ?? []
 
-  const filtered = preToolUse.filter((entry) => !isClaudemdGuardEntry(entry))
+  const filtered = preToolUse.filter((entry) => !isClaudegateEntry(entry))
 
   filtered.push({
     matcher,
@@ -89,7 +89,7 @@ export function uninstallHook(
 
   if (settings.hooks?.PreToolUse) {
     const cleaned = settings.hooks.PreToolUse.filter(
-      (entry) => !isClaudemdGuardEntry(entry)
+      (entry) => !isClaudegateEntry(entry)
     )
 
     if (cleaned.length === 0) {

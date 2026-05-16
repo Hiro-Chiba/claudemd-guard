@@ -1,6 +1,6 @@
-# Contributing to claudemd-guard
+# Contributing to claudegate
 
-Thanks for your interest in improving claudemd-guard! This document describes how to set up the project locally, the conventions we follow, and how to propose changes.
+Thanks for your interest in improving claudegate! This document describes how to set up the project locally, the conventions we follow, and how to propose changes.
 
 ## Development Setup
 
@@ -12,8 +12,8 @@ Requirements:
 Clone and install:
 
 ```bash
-git clone https://github.com/Hiro-Chiba/claudemd-guard.git
-cd claudemd-guard
+git clone https://github.com/Hiro-Chiba/claudegate.git
+cd claudegate
 npm install
 ```
 
@@ -46,7 +46,7 @@ See [docs/architecture.md](docs/architecture.md) for a deeper architectural over
 
 ## Design Principles
 
-claudemd-guard is modeled on the tdd-guard architecture and shares these principles:
+claudegate is modeled on the tdd-guard architecture and shares these principles:
 
 - **Interface-driven**: boundaries (for example, AI clients) go through interfaces such as `IModelClient` so that alternatives can be swapped in.
 - **Dependency injection**: modules accept collaborators via constructor or function parameters to keep them testable.

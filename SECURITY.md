@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Only the latest published version of claudemd-guard receives fixes. Please upgrade before filing a report.
+Only the latest published version of claudegate receives fixes. Please upgrade before filing a report.
 
 | Version | Supported |
 | ------- | --------- |
@@ -11,13 +11,13 @@ Only the latest published version of claudemd-guard receives fixes. Please upgra
 
 ## Reporting a Vulnerability
 
-Please do **not** open a public issue for security problems. Instead, open a private [GitHub Security Advisory](https://github.com/Hiro-Chiba/claudemd-guard/security/advisories/new) on this repository.
+Please do **not** open a public issue for security problems. Instead, open a private [GitHub Security Advisory](https://github.com/Hiro-Chiba/claudegate/security/advisories/new) on this repository.
 
 Include as much of the following as you can:
 
 - A clear description of the issue
 - Steps to reproduce, or a minimal proof of concept
-- The affected version (`claudemd-guard --version`)
+- The affected version (`claudegate --version`)
 - Any relevant environment details (Node.js version, OS, validation backend)
 - Your assessment of the impact
 
@@ -31,12 +31,12 @@ Include as much of the following as you can:
 
 In-scope:
 
-- The claudemd-guard CLI and hook logic
+- The claudegate CLI and hook logic
 - The install / uninstall flow that modifies `~/.claude/settings.json`
 - Dependency handling in this repository
 
 Out-of-scope:
 
 - Vulnerabilities in Claude Code itself, the Claude CLI, or the Anthropic API (please report those to Anthropic directly)
-- User-controlled CLAUDE.md content (by design, claudemd-guard trusts the project's own CLAUDE.md files)
+- User-controlled CLAUDE.md content (by design, claudegate trusts the project's own CLAUDE.md files)
 - Issues that require an attacker to already have write access to the user's filesystem

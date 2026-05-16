@@ -23,22 +23,22 @@ function readJson(path: string): Record<string, unknown> {
 
 describe('resolveHookCommand', () => {
   it('returns node <abs path> when a resolved path is given', () => {
-    const result = resolveHookCommand('/opt/claudemd-guard/dist/cli/claudemd-guard.js')
-    expect(result).toBe('node /opt/claudemd-guard/dist/cli/claudemd-guard.js')
+    const result = resolveHookCommand('/opt/claudegate/dist/cli/claudegate.js')
+    expect(result).toBe('node /opt/claudegate/dist/cli/claudegate.js')
   })
 
   it('returns node <abs path> for any non-empty resolved path (realpath of bin symlink)', () => {
     const result = resolveHookCommand(
-      '/usr/local/lib/node_modules/claudemd-guard/dist/cli/claudemd-guard.js'
+      '/usr/local/lib/node_modules/claudegate/dist/cli/claudegate.js'
     )
     expect(result).toBe(
-      'node /usr/local/lib/node_modules/claudemd-guard/dist/cli/claudemd-guard.js'
+      'node /usr/local/lib/node_modules/claudegate/dist/cli/claudegate.js'
     )
   })
 
-  it('falls back to plain "claudemd-guard" when path is empty (realpath failure)', () => {
+  it('falls back to plain "claudegate" when path is empty (realpath failure)', () => {
     const result = resolveHookCommand('')
-    expect(result).toBe('claudemd-guard')
+    expect(result).toBe('claudegate')
   })
 })
 
@@ -53,7 +53,7 @@ describe('installHook', () => {
   })
 
   it('creates settings.json with PreToolUse hook when file does not exist', () => {
-    installHook('claudemd-guard', SETTINGS_FILE)
+    installHook('claudegate', SETTINGS_FILE)
 
     expect(existsSync(SETTINGS_FILE)).toBe(true)
     const settings = readJson(SETTINGS_FILE) as {
@@ -61,7 +61,7 @@ describe('installHook', () => {
     }
     expect(settings.hooks.PreToolUse).toHaveLength(1)
     expect(settings.hooks.PreToolUse[0].matcher).toBe(DEFAULT_HOOK_MATCHER)
-    expect(settings.hooks.PreToolUse[0].hooks[0].command).toBe('claudemd-guard')
+    expect(settings.hooks.PreToolUse[0].hooks[0].command).toBe('claudegate')
   })
 
   it('preserves other settings when adding hook', () => {
@@ -73,7 +73,7 @@ describe('installHook', () => {
       })
     )
 
-    installHook('claudemd-guard', SETTINGS_FILE)
+    installHook('claudegate', SETTINGS_FILE)
 
     const settings = readJson(SETTINGS_FILE) as {
       theme: string
@@ -85,15 +85,15 @@ describe('installHook', () => {
     expect(settings.hooks.PreToolUse).toHaveLength(1)
   })
 
-  it('replaces existing claudemd-guard entry instead of duplicating', () => {
-    installHook('node /old/path/claudemd-guard.js', SETTINGS_FILE)
-    installHook('claudemd-guard', SETTINGS_FILE)
+  it('replaces existing claudegate entry instead of duplicating', () => {
+    installHook('node /old/path/claudegate.js', SETTINGS_FILE)
+    installHook('claudegate', SETTINGS_FILE)
 
     const settings = readJson(SETTINGS_FILE) as {
       hooks: { PreToolUse: Array<{ hooks: Array<{ command: string }> }> }
     }
     expect(settings.hooks.PreToolUse).toHaveLength(1)
-    expect(settings.hooks.PreToolUse[0].hooks[0].command).toBe('claudemd-guard')
+    expect(settings.hooks.PreToolUse[0].hooks[0].command).toBe('claudegate')
   })
 
   it('preserves unrelated PreToolUse hooks', () => {
@@ -111,7 +111,7 @@ describe('installHook', () => {
       })
     )
 
-    installHook('claudemd-guard', SETTINGS_FILE)
+    installHook('claudegate', SETTINGS_FILE)
 
     const settings = readJson(SETTINGS_FILE) as {
       hooks: { PreToolUse: Array<{ hooks: Array<{ command: string }> }> }
@@ -119,12 +119,12 @@ describe('installHook', () => {
     expect(settings.hooks.PreToolUse).toHaveLength(2)
     const commands = settings.hooks.PreToolUse.map((e) => e.hooks[0].command)
     expect(commands).toContain('other-hook')
-    expect(commands).toContain('claudemd-guard')
+    expect(commands).toContain('claudegate')
   })
 
   it('handles empty settings.json content', () => {
     writeFileSync(SETTINGS_FILE, '')
-    installHook('claudemd-guard', SETTINGS_FILE)
+    installHook('claudegate', SETTINGS_FILE)
 
     const settings = readJson(SETTINGS_FILE) as {
       hooks: { PreToolUse: unknown[] }
@@ -148,8 +148,8 @@ describe('uninstallHook', () => {
     expect(existsSync(SETTINGS_FILE)).toBe(false)
   })
 
-  it('removes the claudemd-guard hook entry', () => {
-    installHook('claudemd-guard', SETTINGS_FILE)
+  it('removes the claudegate hook entry', () => {
+    installHook('claudegate', SETTINGS_FILE)
     uninstallHook(SETTINGS_FILE)
 
     const settings = readJson(SETTINGS_FILE) as { hooks?: unknown }
@@ -165,7 +165,7 @@ describe('uninstallHook', () => {
           PreToolUse: [
             {
               matcher: 'Edit|Write|Bash',
-              hooks: [{ type: 'command', command: 'claudemd-guard' }],
+              hooks: [{ type: 'command', command: 'claudegate' }],
             },
             {
               matcher: 'Edit',
@@ -187,8 +187,8 @@ describe('uninstallHook', () => {
     expect(settings.hooks.PreToolUse[0].hooks[0].command).toBe('other-hook')
   })
 
-  it('deletes hooks key entirely when all entries were claudemd-guard', () => {
-    installHook('claudemd-guard', SETTINGS_FILE)
+  it('deletes hooks key entirely when all entries were claudegate', () => {
+    installHook('claudegate', SETTINGS_FILE)
     uninstallHook(SETTINGS_FILE)
 
     const settings = readJson(SETTINGS_FILE)
