@@ -345,6 +345,42 @@ describe('processHookData', () => {
     expect(result.decision).toBe('block')
   })
 
+  it('appends customRules from agentGateConfig before the AI step', async () => {
+    const input = JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'Bash',
+      tool_input: { command: 'DROP TABLE users;' },
+    })
+
+    const result = await processHookData(input, {
+      config: new Config({ disabled: false }),
+      collectFn: () => [],
+      agentGateConfig: {
+        customRules: [
+          {
+            id: 'no-drop-table',
+            check: (toolName, toolInput) => {
+              if (
+                toolName === 'Bash' &&
+                typeof toolInput.command === 'string' &&
+                /drop\s+table/i.test(toolInput.command)
+              ) {
+                return {
+                  kind: 'block',
+                  reason: 'DROP TABLE forbidden. Use a migration.',
+                }
+              }
+              return { kind: 'allow' }
+            },
+          },
+        ],
+      },
+    })
+
+    expect(result.decision).toBe('block')
+    expect(result.reason).toBe('DROP TABLE forbidden. Use a migration.')
+  })
+
   it('validates again after cooldown expires', async () => {
     let callCount = 0
     const mockValidator = async () => {

@@ -57,9 +57,47 @@ To register against Cursor instead of Claude Code, run the binary with `--agent 
 | `AGENT_GATE_REASON_LANG` | `auto` | Language for AI-generated `reason` text. `auto` matches the instruction files (English fallback when mixed). Pass `en`, `ja`, `zh`, `ko`, etc. to force a specific language |
 | `USE_SYSTEM_CLAUDE` | `false` | `true` forces PATH `claude` (default: `~/.claude/local/claude` with PATH fallback) |
 
-### Project config file: `.agent-gate.json`
+### Project config file
 
-Place an `.agent-gate.json` at the project root (or any parent directory) to customize the deterministic baseline.
+agent-gate looks for either a TypeScript / JavaScript config or a legacy JSON config, walking upward from the cwd until it finds one. Precedence (highest wins): `.agent-gate.config.ts` > `.mts` > `.mjs` > `.cjs` > `.js` > `.agent-gate.json`.
+
+#### TypeScript / JavaScript config
+
+The full API including custom rules:
+
+```ts
+// .agent-gate.config.ts
+import { defineConfig, forbidCommandPattern, forbidFilePathPattern } from 'agent-gate'
+
+export default defineConfig({
+  disabledRules: ['prevent-force-push-main'],
+  protectedBranches: ['main', 'release'],
+  extraSecretPathPrefixes: ['vault/', 'secrets/'],
+  customRules: [
+    forbidCommandPattern({
+      id: 'no-drop-table',
+      match: /drop\s+table/i,
+      reason: 'DROP TABLE is forbidden. Use a migration instead.',
+    }),
+    forbidFilePathPattern({
+      id: 'no-prod-config',
+      match: /production\.ya?ml$/,
+      reason: 'Production config edits go through ops review.',
+    }),
+  ],
+})
+```
+
+| Field | Effect |
+|---|---|
+| `disabledRules` | List of rule ids that will not run. Merged with `AGENT_GATE_DISABLED_RULES`. |
+| `protectedBranches` | Overrides the default list used by `prevent-force-push-main`. |
+| `extraSecretPathPrefixes` | Additional path substrings treated as secret targets by `prevent-secret-file-write`. |
+| `customRules` | User-defined `DeterministicRule[]` appended after the built-ins. Use the `forbidCommandPattern` / `forbidContentPattern` / `forbidFilePathPattern` factories or hand-write your own. |
+
+#### Legacy JSON config
+
+Still works for simple cases:
 
 ```json
 {
@@ -69,11 +107,7 @@ Place an `.agent-gate.json` at the project root (or any parent directory) to cus
 }
 ```
 
-| Field | Effect |
-|---|---|
-| `disabled_rules` | List of rule ids that will not run. Merged with `AGENT_GATE_DISABLED_RULES`. |
-| `protected_branches` | Overrides the default list used by `prevent-force-push-main`. |
-| `extra_secret_paths` | Additional path substrings treated as secret targets by `prevent-secret-file-write`. |
+JSON cannot express custom rules. Migrate to the TS/JS form when you need them.
 
 ## How It Works
 

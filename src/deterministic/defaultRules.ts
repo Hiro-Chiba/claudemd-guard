@@ -8,13 +8,14 @@ import { AgentGateConfig } from '../config/AgentGateConfig'
 
 /**
  * Builds the deterministic rule list, applying config overrides where the
- * rule supports them and filtering out any rule ids listed in
- * config.disabledRules. Always returns the rules in stable order.
+ * rule supports them, appending any user-supplied customRules, and
+ * filtering out any rule ids listed in config.disabledRules.
+ * Built-ins come first; custom rules run after them in declaration order.
  */
 export function buildDefaultDeterministicRules(
   config?: AgentGateConfig
 ): DeterministicRule[] {
-  const rules: DeterministicRule[] = [
+  const builtIn: DeterministicRule[] = [
     preventRmRfRoot,
     preventSecretFileWriteWith({
       extraSecretPathPrefixes: config?.extraSecretPathPrefixes,
@@ -25,14 +26,11 @@ export function buildDefaultDeterministicRules(
     }),
     preventSystemPathWrite,
   ]
-
+  const custom = config?.customRules ?? []
+  const all = [...builtIn, ...custom]
   const disabled = new Set(config?.disabledRules ?? [])
-  return rules.filter((r) => !disabled.has(r.id))
+  return all.filter((r) => !disabled.has(r.id))
 }
 
-/**
- * Convenience export: the rule list with no config overrides. Kept for
- * existing callers and tests that construct rules directly.
- */
 export const defaultDeterministicRules: DeterministicRule[] =
   buildDefaultDeterministicRules()
