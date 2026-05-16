@@ -23,7 +23,13 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
-        run: npm ci
+        # npm ci is strict about platform-specific optional deps in the
+        # lock file. jiti's @rolldown/* transitive deps resolve to
+        # different @emnapi versions on macOS vs Linux runners, which
+        # makes npm ci fail on the Linux CI even when the lock file is
+        # in sync on the maintainer's mac. npm install tolerates this
+        # drift while still using the lock file as a constraint.
+        run: npm install --no-audit --no-fund --no-progress
 
       - name: Verify tag matches package.json version
         run: |
