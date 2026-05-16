@@ -1,19 +1,30 @@
 {
   "name": "agent-gate",
   "version": "1.0.0",
-  "description": "AI-powered CLAUDE.md enforcer for Claude Code hooks",
+  "description": "Runtime rule enforcer for AI coding agents. Reads CLAUDE.md / AGENTS.md / .cursorrules and enforces them via Claude Code and Cursor hooks, with a deterministic safety baseline.",
   "author": "Hiro-Chiba",
   "license": "MIT",
+  "homepage": "https://github.com/Hiro-Chiba/agent-gate#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Hiro-Chiba/agent-gate.git"
   },
+  "bugs": {
+    "url": "https://github.com/Hiro-Chiba/agent-gate/issues"
+  },
   "keywords": [
     "claude",
     "claude-code",
-    "hooks",
     "claude-md",
+    "agents-md",
+    "cursor",
+    "cursor-hooks",
+    "cursor-rules",
+    "ai-agent",
     "ai-tools",
+    "hooks",
+    "guardrail",
+    "linter",
     "code-quality"
   ],
   "engines": {
@@ -28,8 +39,13 @@
     "dist",
     "!dist/*.tsbuildinfo",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "AGENTS.md"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "tsc --build tsconfig.build.json",
     "test": "vitest run",

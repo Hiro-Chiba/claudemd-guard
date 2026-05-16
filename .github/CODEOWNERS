@@ -1,0 +1,5 @@
+# Default owner for every path in this repository.
+# Pull requests touching these paths automatically request review from
+# the listed owners.
+
+* @Hiro-Chiba

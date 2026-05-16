@@ -17,13 +17,15 @@ catastrophic operations before any AI call.
 
 These are non-negotiable while modifying this codebase.
 
-- Never run `npm publish` against this repository. The npm name is held
-  by another package; agent-gate is git-clone-distributed for now.
 - Never weaken the deterministic safety rules to make a test pass. If a
   rule blocks something it should not, narrow the rule by adding an
   explicit allow-case, never by deleting the protection.
 - Never commit any file matching `.env`, `.env.*` (other than
   `.env.example`), `*.pem`, `*.key`, or files inside `.ssh/`.
+- Never run `npm publish` from a local checkout. Publishing is performed
+  exclusively by the GitHub Actions release workflow on a signed `v*`
+  tag push (using OIDC + npm provenance). This keeps releases
+  reproducible and supply-chain auditable.
 
 ## Soft rules (style and approach)
 
