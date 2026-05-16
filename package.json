@@ -55,7 +55,7 @@
     "prepublishOnly": "npm run checks && npm run build"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.93.0",
+    "@anthropic-ai/sdk": "^0.96.0",
     "jiti": "^2.7.0",
     "zod": "^4.3.6"
   },
