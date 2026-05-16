@@ -11,6 +11,7 @@ import { Config } from '../config/Config'
 import { ClaudeCli } from '../validation/models/ClaudeCli'
 import { AnthropicApi } from '../validation/models/AnthropicApi'
 import { CompositeModelClient } from '../validation/models/CompositeModelClient'
+import { AgentSdkClient } from '../validation/models/AgentSdkClient'
 import { DeterministicRule } from '../deterministic/types'
 import { runDeterministicRules } from '../deterministic/engine'
 import { buildDefaultDeterministicRules } from '../deterministic/defaultRules'
@@ -236,11 +237,20 @@ export async function processHookData(
 }
 
 function createModelClient(config: Config, cwd: string): IModelClient {
-  // Build a fallback chain: the most-preferred client comes first, with
-  // ClaudeCli as a secondary path. The CompositeModelClient tries each in
-  // order; if the first fails, the next runs. The validator's outer
-  // try/catch fail-opens when every client has failed.
+  // Build a fallback chain: the most-preferred client comes first.
+  // The CompositeModelClient tries each in order; if one fails, the next
+  // runs. The validator's outer try/catch fail-opens if every client has
+  // failed.
+  //
+  // Order: AgentSdkClient (when AGENT_GATE_USE_SDK=1) -> AnthropicApi
+  // (when an API key is set) -> ClaudeCli (always available as a fallback).
+  // AgentSdkClient is preferred when enabled because it reuses the host
+  // agent's existing Claude authentication, removing the need for a
+  // separate API key.
   const clients: IModelClient[] = []
+  if (config.useSdk) {
+    clients.push(new AgentSdkClient({ config }))
+  }
   if (config.useApi) {
     clients.push(new AnthropicApi(config))
   }

@@ -44,6 +44,11 @@ export type { Adapter, ReadHistoryOptions } from './adapters/Adapter'
 // Model clients (for users wiring up custom AI fallback chains)
 export { CompositeModelClient } from './validation/models/CompositeModelClient'
 export type { CompositeModelClientOptions } from './validation/models/CompositeModelClient'
+export { AgentSdkClient } from './validation/models/AgentSdkClient'
+export type {
+  AgentSdkClientOptions,
+  AgentSdkQueryFn,
+} from './validation/models/AgentSdkClient'
 
 // Doctor (CLAUDE.md linter)
 export { lintRuleSources } from './doctor/lintRuleSources'

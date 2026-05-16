@@ -13,6 +13,13 @@ export type ConfigOptions = {
    * - "en", "ja", "zh", "ko", etc.: write reasons in that language.
    */
   reasonLang?: string
+  /**
+   * Prefer Anthropic's agent SDK (`@anthropic-ai/claude-agent-sdk`) as the
+   * first model client. Reuses the host process's Claude auth, removing
+   * the need for AGENT_GATE_API_KEY. The SDK has noticeable cold-start
+   * cost, so this is most useful when paired with `agent-gate daemon`.
+   */
+  useSdk?: boolean
 }
 
 export class Config {
@@ -22,6 +29,7 @@ export class Config {
   readonly disabled: boolean
   readonly useSystemClaude: boolean
   readonly reasonLang: string | undefined
+  readonly useSdk: boolean
 
   constructor(options?: ConfigOptions) {
     this.model = options?.model ?? process.env.AGENT_GATE_MODEL ?? DEFAULT_MODEL
@@ -31,6 +39,7 @@ export class Config {
     this.disabled = options?.disabled ?? process.env.AGENT_GATE_DISABLED === 'true'
     this.useSystemClaude = options?.useSystemClaude ?? process.env.USE_SYSTEM_CLAUDE === 'true'
     this.reasonLang = options?.reasonLang ?? process.env.AGENT_GATE_REASON_LANG
+    this.useSdk = options?.useSdk ?? process.env.AGENT_GATE_USE_SDK === '1'
   }
 
   get useApi(): boolean {
