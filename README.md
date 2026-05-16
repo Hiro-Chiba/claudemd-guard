@@ -10,11 +10,12 @@ Prevents Claude Code from forgetting CLAUDE.md rules during long sessions caused
 
 ## Features
 
+- Deterministic safety baseline that fires before any AI call (recursive rm on catastrophic paths, writes to secret files, force push to protected branches)
 - AI validation of CLAUDE.md rules (block mode)
 - Uses Claude CLI by default (no additional API key required)
 - Anthropic API direct call also supported
 - Automatic CLAUDE.md collection (upward + downward directory walk)
-- Optional cooldown between validations
+- Optional cooldown between AI validations
 
 ## Requirements
 
@@ -45,10 +46,21 @@ To remove the hook, run `./uninstall.sh` from the same directory.
 
 ## How It Works
 
-1. Claude Code attempts to run `Edit`/`Write`/`Bash` — PreToolUse hook fires
-2. agent-gate collects CLAUDE.md files from the project
-3. AI checks the tool operation against the rules
-4. Violation found, operation blocked. No violation, operation proceeds.
+1. Claude Code attempts to run `Edit`/`Write`/`Bash`, and the PreToolUse hook fires.
+2. Deterministic safety rules run first. Catastrophic patterns (`rm -rf /`, writes to `.env` or `.ssh/*`, `git push --force` on `main`, etc.) are blocked here without calling AI.
+3. If the safety baseline passes, agent-gate collects `CLAUDE.md` files from the project.
+4. AI validates the operation against those rules.
+5. Violation found, operation blocked. No violation, operation proceeds.
+
+## Built-in Safety Rules
+
+These run by default with no configuration required.
+
+| Rule | Blocks |
+|---|---|
+| `prevent-rm-rf-root` | Recursive `rm` on `/`, `$HOME`, `~`, `/etc`, `/usr`, `/var`, and other catastrophic paths. Handles `sudo` prefix and flag variants (`-rf`, `-fr`, `-Rf`). |
+| `prevent-secret-file-write` | `Edit`/`Write` on `.env*` (non-template), `.ssh/*`, `.aws/credentials`, `*.pem`, `*.key`, `id_rsa`, `.netrc`, etc. |
+| `prevent-force-push-main` | `git push --force` or `-f` to `main`, `master`, `develop`, `production`, `release`, `stable`. Allows `--force-with-lease`. |
 
 ## Network Access
 
