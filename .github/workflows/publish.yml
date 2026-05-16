@@ -47,7 +47,10 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Publish with provenance
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # OIDC trusted publishing: no NPM_TOKEN needed. The id-token:write
+      # permission at the workflow level lets the npm CLI request an
+      # OIDC token from GitHub and present it to the npm registry.
+      # Provenance is generated automatically when publishing via a
+      # trusted publisher; the --provenance flag is therefore optional.
+      - name: Publish
+        run: npm publish --access public

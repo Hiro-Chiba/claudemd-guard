@@ -1,204 +1,100 @@
 # agent-gate
 
 [![CI](https://github.com/Hiro-Chiba/agent-gate/actions/workflows/ci.yml/badge.svg)](https://github.com/Hiro-Chiba/agent-gate/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@hiro-c/agent-gate)](https://www.npmjs.com/package/@hiro-c/agent-gate)
 
-One natural-language rule source, enforced at runtime across multiple AI coding tools.
+**Runtime rule enforcer for AI coding agents.** Reads your existing instruction files (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`, ...) and enforces them at hook time in Claude Code and Cursor.
 
-agent-gate reads the instruction files you already have (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.cursor/rules/*.mdc`, `.clinerules`, `.windsurf/rules`, `.github/copilot-instructions.md`, `CONVENTIONS.md`) as a single combined rule set, then enforces them at hook time in Claude Code and Cursor. A deterministic safety baseline catches catastrophic operations before any AI call.
+## What it does
 
-## Why
+- **Stops catastrophic operations** before AI ever sees them: `rm -rf /`, writes to `.env` / `.ssh/*`, force-push to `main`, edits to `/etc`.
+- **Aggregates 8 instruction file formats** into one rule set the AI uses to decide on the remaining cases.
+- **Returns guidance, not denials**: block reasons describe the next correct step the agent should take.
+- **Audits your rule files** with `agent-gate lint` (detects vague rules and ambiguous modifiers like "適切に" / "where possible").
 
-The AI coding tool landscape in 2026 has fragmented into many tools, each with its own instruction file format. Existing tooling either syncs rule files across tools (rulesync, symlinks) or enforces a single rule format at runtime (probity, tdd-guard), but not both. agent-gate sits in the gap: it accepts whatever natural-language instruction files you already maintain and enforces them across multiple AI tools through a single hook.
-
-Two pain points the project is built to address:
-
-- **Rule forgetting** in long agent sessions, where context compression drops the rules from the prompt and the agent quietly drifts off-spec.
-- **Destructive operations** like `rm -rf $HOME` or force-pushing main, which AI judgment is too unreliable to catch consistently.
-
-## Features
-
-- Multi-source rule collection across 8 instruction file formats, surfaced to AI with per-source attribution.
-- Adapter pattern: same binary works in Claude Code (`--agent claude-code`, default) and Cursor 1.7 (`--agent cursor`).
-- Deterministic safety baseline with five built-in rules that fire before any AI call.
-- AI validation against the combined rule set when the safety baseline passes.
-- Per-rule disable and per-project customization via `.agent-gate.json` and `AGENT_GATE_DISABLED_RULES`.
-- Optional decision log (`AGENT_GATE_LOG=1`) and `agent-gate stats` for auditing.
-- Block reasons are guidance, not denials: the AI is instructed to describe the next correct step alongside the violated rule.
-
-## Requirements
-
-- Node.js >= 22.0.0
-- Claude Code or Cursor 1.7
-
-## Installation
+## Install
 
 ```bash
-git clone https://github.com/Hiro-Chiba/agent-gate.git
-cd agent-gate
-./install.sh
+npm install -g @hiro-c/agent-gate
+agent-gate install
 ```
 
-The install script handles dependency install, build, and Claude Code hook registration. Restart Claude Code to activate.
+`agent-gate install` registers the Claude Code PreToolUse hook in `~/.claude/settings.json`. Restart Claude Code to activate. Use `agent-gate uninstall` to remove.
 
-To register against Cursor instead of Claude Code, run the binary with `--agent cursor` from your Cursor hook config. To remove the Claude Code hook, run `./uninstall.sh`.
+For Cursor 1.7, point your hook config at `agent-gate --agent cursor`.
 
-## Configuration
+## How it works
 
-### Environment variables
+Every `Edit` / `Write` / `Bash` call from the agent goes through:
 
-| Variable | Default | Description |
-|---|---|---|
-| `AGENT_GATE_MODEL` | `claude-sonnet-4-6` | Model used for AI validation |
-| `AGENT_GATE_API_KEY` | (none) | Anthropic API key. Uses the API directly when set; otherwise spawns the Claude CLI |
-| `AGENT_GATE_COOLDOWN` | `0` | Cooldown in seconds between AI validations (deterministic rules always fire) |
-| `AGENT_GATE_DISABLED` | `false` | Set to `true` to disable the whole tool |
-| `AGENT_GATE_DISABLED_RULES` | (none) | Comma-separated rule ids to disable, merged with the config file |
-| `AGENT_GATE_LOG` | (none) | Set to `1` to append decisions to `~/.agent-gate/log.jsonl` |
-| `AGENT_GATE_REASON_LANG` | `auto` | Language for AI-generated `reason` text. `auto` matches the instruction files (English fallback when mixed). Pass `en`, `ja`, `zh`, `ko`, etc. to force a specific language |
-| `USE_SYSTEM_CLAUDE` | `false` | `true` forces PATH `claude` (default: `~/.claude/local/claude` with PATH fallback) |
+```
+hook payload → adapter → deterministic rules → AI validation → verdict
+                            (5 built-ins)        (your rules)
+```
 
-### Project config file
+If a deterministic rule fires, AI is skipped. Otherwise agent-gate reads all instruction files in the project tree and asks the AI to validate the operation against them.
 
-agent-gate looks for either a TypeScript / JavaScript config or a legacy JSON config, walking upward from the cwd until it finds one. Precedence (highest wins): `.agent-gate.config.ts` > `.mts` > `.mjs` > `.cjs` > `.js` > `.agent-gate.json`.
+## Built-in safety rules
 
-#### TypeScript / JavaScript config
+Run by default, disable per-rule in `.agent-gate.json` if needed.
 
-The full API including custom rules:
+| Rule | Blocks |
+|---|---|
+| `prevent-rm-rf-root` | `rm -rf` on `/`, `$HOME`, `~`, `/etc`, `/usr`, `/var`, etc. (handles `sudo`, flag variants). |
+| `prevent-secret-file-write` | `Edit`/`Write` to `.env*`, `.ssh/*`, `.aws/credentials`, `*.pem`, `*.key`, `id_rsa`. |
+| `prevent-bash-secret-write` | Shell redirects to the same paths (`echo > .env`, `tee .ssh/id_rsa`). |
+| `prevent-force-push-main` | `git push --force` to `main`, `master`, `develop`, `release`, etc. Allows `--force-with-lease`. |
+| `prevent-system-path-write` | `Edit`/`Write` to `/etc`, `/usr`, `/System`, `/Library`. |
+
+## Config
+
+Drop a `.agent-gate.config.ts` (or `.js` / `.json`) at the project root:
 
 ```ts
-// .agent-gate.config.ts
-import { defineConfig, forbidCommandPattern, forbidFilePathPattern } from 'agent-gate'
+import { defineConfig, forbidCommandPattern } from '@hiro-c/agent-gate'
 
 export default defineConfig({
   disabledRules: ['prevent-force-push-main'],
   protectedBranches: ['main', 'release'],
-  extraSecretPathPrefixes: ['vault/', 'secrets/'],
   customRules: [
     forbidCommandPattern({
       id: 'no-drop-table',
       match: /drop\s+table/i,
-      reason: 'DROP TABLE is forbidden. Use a migration instead.',
-    }),
-    forbidFilePathPattern({
-      id: 'no-prod-config',
-      match: /production\.ya?ml$/,
-      reason: 'Production config edits go through ops review.',
+      reason: 'DROP TABLE is forbidden. Use a migration.',
     }),
   ],
 })
 ```
 
-| Field | Effect |
+Full options: see [docs/config.md](docs/config.md) (TODO) or `AgentGatePluginConfig` in the source.
+
+## CLI
+
+| Command | What it does |
 |---|---|
-| `disabledRules` | List of rule ids that will not run. Merged with `AGENT_GATE_DISABLED_RULES`. |
-| `protectedBranches` | Overrides the default list used by `prevent-force-push-main`. |
-| `extraSecretPathPrefixes` | Additional path substrings treated as secret targets by `prevent-secret-file-write`. |
-| `customRules` | User-defined `DeterministicRule[]` appended after the built-ins. Use the `forbidCommandPattern` / `forbidContentPattern` / `forbidFilePathPattern` factories or hand-write your own. |
+| `agent-gate` | Run as hook (reads stdin, used internally) |
+| `agent-gate install` / `uninstall` | Register or remove the Claude Code hook |
+| `agent-gate lint` | Audit instruction files for ambiguity, emptiness, missing rules |
+| `agent-gate stats` | Summarize the decision log (after `AGENT_GATE_LOG=1`) |
+| `agent-gate daemon` | Long-lived server on a Unix socket (opt-in speedup, set `AGENT_GATE_DAEMON=1`) |
 
-#### Legacy JSON config
+## Environment
 
-Still works for simple cases:
-
-```json
-{
-  "disabled_rules": ["prevent-force-push-main"],
-  "protected_branches": ["main", "release"],
-  "extra_secret_paths": ["vault/", "secrets/"]
-}
-```
-
-JSON cannot express custom rules. Migrate to the TS/JS form when you need them.
-
-## How It Works
-
-1. The AI coding tool fires a pre-tool-use hook with its vendor-specific JSON payload.
-2. The selected adapter parses that payload into a normalized `Action`.
-3. Deterministic safety rules run first. Catastrophic patterns are blocked here without calling AI.
-4. If the safety baseline passes, agent-gate collects all 8 instruction file formats present in the project tree.
-5. The AI validates the operation against the combined rule set, with each source attributed by kind.
-6. The verdict (block + guidance, or allow) is returned through the adapter's response formatter.
-
-## Built-in Safety Rules
-
-| Rule | Blocks |
+| Var | Effect |
 |---|---|
-| `prevent-rm-rf-root` | Recursive `rm` on `/`, `$HOME`, `~`, `/etc`, `/usr`, `/var`, and other catastrophic paths. Handles `sudo` prefix and flag variants (`-rf`, `-fr`, `-Rf`). |
-| `prevent-secret-file-write` | `Edit`/`Write` on `.env*` (non-template), `.ssh/*`, `.aws/credentials`, `*.pem`, `*.key`, `id_rsa`, `.netrc`. |
-| `prevent-bash-secret-write` | Shell redirects to the same secret paths via `>`, `>>`, or `tee`. |
-| `prevent-force-push-main` | `git push --force` or `-f` to `main`, `master`, `develop`, `production`, `release`, `stable`. Allows `--force-with-lease`. |
-| `prevent-system-path-write` | `Edit`/`Write` to `/etc`, `/usr`, `/var`, `/System`, `/Library`, `/opt`, and other system-owned paths. |
+| `AGENT_GATE_DISABLED` | Skip all checks |
+| `AGENT_GATE_DISABLED_RULES` | Comma-separated rule ids to skip |
+| `AGENT_GATE_REASON_LANG` | AI reason language: `auto` (default) / `en` / `ja` / etc. |
+| `AGENT_GATE_LOG` | `1` writes decisions to `~/.agent-gate/log.jsonl` |
+| `AGENT_GATE_API_KEY` | Use Anthropic API directly instead of `claude` CLI |
+| `AGENT_GATE_DAEMON` | `1` routes through the daemon if it is running |
 
-Each rule can be disabled individually through `.agent-gate.json` or the env var.
+## Supported AI tools
 
-## Supported Instruction File Formats
+- **Claude Code** (mature, default).
+- **Cursor 1.7** (beta, `--agent cursor`; payload mapping is best-effort against public docs).
 
-agent-gate aggregates rules from any combination of:
-
-- `CLAUDE.md` (Claude Code)
-- `AGENTS.md` (cross-tool spec backed by the Linux Foundation Agentic AI Foundation)
-- `.cursorrules` (Cursor legacy)
-- `.cursor/rules/*.mdc` (Cursor current)
-- `.clinerules/*.md` (Cline)
-- `.windsurf/rules/*.md` (Windsurf)
-- `.github/copilot-instructions.md` (GitHub Copilot)
-- `CONVENTIONS.md` (Aider)
-
-You do not need to choose. Maintain whichever file your team already uses; agent-gate reads them all.
-
-## Supported AI Coding Tools
-
-agent-gate enforces in any tool that exposes a pre-tool-use hook. As of v1:
-
-- Claude Code (mature). `agent-gate --agent claude-code`, the default.
-- Cursor 1.7 (beta). `agent-gate --agent cursor`. Payload mapping is best-effort against public docs.
-
-Tools without a hook surface (Copilot, Cline, Aider, Codex web, Replit, Devin) can still benefit from agent-gate as a rule source linter or via downstream sync (rulesync, symlinks), but cannot be enforced at runtime.
-
-## CLAUDE.md Doctor
-
-Run `agent-gate lint` from a project root to audit your instruction files for AI-friendliness. The doctor walks the same 8 file formats the runtime reads, then surfaces:
-
-- **Empty files** that would make the AI think no rules exist.
-- **Files with no concrete rules** (no imperatives, no bullets, no numbered items).
-- **Ambiguous modifiers** like "where possible", "as needed", "適切に", "なるべく", "可能な限り", "必要に応じて". AI judgment cannot enforce these reliably; the doctor suggests replacing them with a concrete condition or threshold.
-
-```text
-$ agent-gate lint
-/p/CLAUDE.md
-  [warning] no-concrete-rules: No imperatives ...
-  [info] ambiguous-modifier (line 5): Ambiguous modifier "適切に" ...
-      > - エラーは適切に扱う
-
-1 finding.
-```
-
-Exit code is 1 if any finding has severity `error`, otherwise 0, so the command can run in CI.
-
-## Daemon mode
-
-Each hook invocation normally spawns a fresh Node process (cold start ~300ms). For users that fire hooks at high frequency, agent-gate can run as a long-lived daemon on a Unix socket and let hook invocations reuse the warm process.
-
-```bash
-# Terminal 1: start the daemon (foreground; manage with systemd / launchctl / tmux in production).
-agent-gate daemon
-
-# Terminal 2 (or in your hook config):
-AGENT_GATE_DAEMON=1 agent-gate
-```
-
-When `AGENT_GATE_DAEMON=1`, the hook tries the socket first and transparently falls back to direct mode if the daemon is unreachable. Set `AGENT_GATE_SOCKET_PATH` to override the default `$TMPDIR/agent-gate.sock`.
-
-The daemon is opt-in. Users not setting `AGENT_GATE_DAEMON=1` keep the existing one-shot behavior.
-
-## Observability
-
-Set `AGENT_GATE_LOG=1` to append every decision to `~/.agent-gate/log.jsonl`. Each line is a JSON object with timestamp, adapter, tool, decision, reason, source (`deterministic` / `ai`), and `ruleId` when a deterministic rule fired.
-
-Run `agent-gate stats` for a summary: total decisions, block percentage, breakdown by source, adapter, tool, and rule id.
-
-## Network Access
-
-agent-gate only communicates with Anthropic endpoints, either directly via the Anthropic API (when `AGENT_GATE_API_KEY` is set) or indirectly through the Claude CLI subprocess. It does not contact any other external services and does not send telemetry. Deterministic rules run entirely locally.
+Other tools (Copilot, Cline, Aider, Codex web, Replit, Devin) lack a hook surface and cannot be enforced at runtime.
 
 ## License
 
