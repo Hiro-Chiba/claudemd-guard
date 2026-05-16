@@ -1,6 +1,6 @@
 {
   "name": "@hiro-c/agent-gate",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Runtime rule enforcer for AI coding agents. Reads CLAUDE.md / AGENTS.md / .cursorrules and enforces them via Claude Code and Cursor hooks, with a deterministic safety baseline.",
   "author": "Hiro-Chiba",
   "license": "MIT",
