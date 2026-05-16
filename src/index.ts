@@ -54,6 +54,20 @@ export type {
   Severity,
 } from './doctor/findings'
 
+// Daemon
+export { DaemonServer } from './daemon/server'
+export type { DaemonServerOptions, DaemonHandler } from './daemon/server'
+export { sendToDaemon } from './daemon/client'
+export type { SendToDaemonOptions } from './daemon/client'
+export {
+  defaultSocketPath as defaultDaemonSocketPath,
+} from './daemon/protocol'
+export type {
+  DaemonRequest,
+  DaemonResponse,
+  DaemonErrorResponse,
+} from './daemon/protocol'
+
 // Observability
 export { EventBus } from './observability/eventBus'
 export { JsonlFileSink } from './observability/sinks/JsonlFileSink'

@@ -20,6 +20,9 @@ import { defaultLogPath } from '../observability/decisionLogger'
 import { collectRuleSources } from '../collector/collectRuleSources'
 import { lintRuleSources } from '../doctor/lintRuleSources'
 import { formatFindings } from '../doctor/formatFindings'
+import { DaemonServer } from '../daemon/server'
+import { sendToDaemon } from '../daemon/client'
+import { defaultSocketPath } from '../daemon/protocol'
 
 const HELP_TEXT = `agent-gate — runtime enforcer for AI coding agent rules
 
@@ -30,6 +33,7 @@ Usage:
   agent-gate uninstall              Remove the hook from ~/.claude/settings.json
   agent-gate stats                  Summarize decisions from the log file
   agent-gate lint                   Audit CLAUDE.md / AGENTS.md / etc. for AI-friendliness
+  agent-gate daemon                 Start the long-lived daemon (Unix socket)
   agent-gate --help                 Show this help
   agent-gate --version              Show version
 
@@ -43,6 +47,8 @@ Environment:
   AGENT_GATE_DISABLED           Set to "true" to disable the whole tool
   AGENT_GATE_DISABLED_RULES     Comma-separated rule ids to disable
   AGENT_GATE_LOG                Set to "1" to write decisions to ~/.agent-gate/log.jsonl
+  AGENT_GATE_DAEMON             Set to "1" to route hook calls through the daemon
+  AGENT_GATE_SOCKET_PATH        Daemon socket path (default: $TMPDIR/agent-gate.sock)
   USE_SYSTEM_CLAUDE             Set to "true" to force PATH claude binary
 `
 
@@ -63,6 +69,19 @@ function runHookMode(adapter: Adapter): void {
 
   process.stdin.on('end', async () => {
     try {
+      if (process.env.AGENT_GATE_DAEMON === '1') {
+        const socketPath =
+          process.env.AGENT_GATE_SOCKET_PATH ?? defaultSocketPath()
+        const resp = await sendToDaemon(
+          { adapter: adapter.id, payload: inputData, cwd: process.cwd() },
+          { socketPath, timeoutMs: 2000 }
+        )
+        if (resp !== null) {
+          console.log(resp.output)
+          process.exit(0)
+        }
+        // Daemon unreachable: fall through to direct mode.
+      }
       const result = await run(inputData, adapter)
       console.log(adapter.formatResponse(result))
     } catch (error) {
@@ -71,6 +90,37 @@ function runHookMode(adapter: Adapter): void {
       process.exit(0)
     }
   })
+}
+
+async function runDaemon(): Promise<void> {
+  const socketPath =
+    process.env.AGENT_GATE_SOCKET_PATH ?? defaultSocketPath()
+  const server = new DaemonServer({
+    socketPath,
+    handler: async (req) => {
+      const adapter = getAdapter(req.adapter)
+      if (!adapter) {
+        return {
+          output: JSON.stringify({
+            error: `unknown adapter: ${req.adapter}`,
+          }),
+        }
+      }
+      const result = await processHookData(req.payload, {
+        adapter,
+        cwd: req.cwd,
+      })
+      return { output: adapter.formatResponse(result) }
+    },
+  })
+  await server.start()
+  console.log(`agent-gate daemon listening on ${socketPath}`)
+  const shutdown = async (): Promise<void> => {
+    await server.stop()
+    process.exit(0)
+  }
+  process.on('SIGINT', () => void shutdown())
+  process.on('SIGTERM', () => void shutdown())
 }
 
 function runInstall(): void {
@@ -186,6 +236,9 @@ function main(): void {
       return
     case 'lint':
       runLint()
+      return
+    case 'daemon':
+      void runDaemon()
       return
     default:
       console.error(`Unknown subcommand: ${subcommand}`)

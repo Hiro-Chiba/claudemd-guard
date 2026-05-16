@@ -174,6 +174,22 @@ $ agent-gate lint
 
 Exit code is 1 if any finding has severity `error`, otherwise 0, so the command can run in CI.
 
+## Daemon mode
+
+Each hook invocation normally spawns a fresh Node process (cold start ~300ms). For users that fire hooks at high frequency, agent-gate can run as a long-lived daemon on a Unix socket and let hook invocations reuse the warm process.
+
+```bash
+# Terminal 1: start the daemon (foreground; manage with systemd / launchctl / tmux in production).
+agent-gate daemon
+
+# Terminal 2 (or in your hook config):
+AGENT_GATE_DAEMON=1 agent-gate
+```
+
+When `AGENT_GATE_DAEMON=1`, the hook tries the socket first and transparently falls back to direct mode if the daemon is unreachable. Set `AGENT_GATE_SOCKET_PATH` to override the default `$TMPDIR/agent-gate.sock`.
+
+The daemon is opt-in. Users not setting `AGENT_GATE_DAEMON=1` keep the existing one-shot behavior.
+
 ## Observability
 
 Set `AGENT_GATE_LOG=1` to append every decision to `~/.agent-gate/log.jsonl`. Each line is a JSON object with timestamp, adapter, tool, decision, reason, source (`deterministic` / `ai`), and `ruleId` when a deterministic rule fired.
