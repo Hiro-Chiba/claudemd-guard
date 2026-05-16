@@ -26,6 +26,7 @@ import {
   isLoggingEnabled,
   DecisionSource,
 } from '../observability/decisionLogger'
+import { DecisionCache } from '../cache/DecisionCache'
 import { EventBus } from '../observability/eventBus'
 import { JsonlFileSink } from '../observability/sinks/JsonlFileSink'
 import { PipelineEvent } from '../observability/sinks/Sink'
@@ -86,6 +87,12 @@ export interface ProcessHookDataDeps {
   eventBus?: EventBus
   /** Override logging behavior. When provided, replaces env detection. */
   logging?: { enabled: boolean; path?: string }
+  /**
+   * Optional in-process decision cache. Most useful in daemon mode where
+   * the cache survives across hook invocations and short-circuits the
+   * entire pipeline on a hit.
+   */
+  cache?: DecisionCache
 }
 
 function resolveEventBus(deps: ProcessHookDataDeps | undefined): EventBus {
@@ -119,6 +126,19 @@ export async function processHookData(
 
   // Resolve cwd early so the agent-gate config can be loaded relative to it.
   const cwd = deps?.cwd ?? process.cwd()
+
+  // Cache lookup: if a recent verdict for the exact same (adapter, tool,
+  // input, cwd) is still valid, return it without re-running the pipeline.
+  if (deps?.cache) {
+    const cached = deps.cache.get({
+      adapter: adapter.id,
+      toolName,
+      toolInput,
+      cwd,
+    })
+    if (cached) return cached
+  }
+
   const agentGateConfig = deps?.agentGateConfig ?? loadAgentGateConfig(cwd)
 
   // Build SessionContext (history from adapter, projectRoot defaults to cwd
@@ -167,7 +187,17 @@ export async function processHookData(
       source: 'deterministic',
       ruleId: ruleVerdict.ruleId,
     })
-    return { decision: 'block', reason: ruleVerdict.reason }
+    const verdict: ValidationResult = {
+      decision: 'block',
+      reason: ruleVerdict.reason,
+    }
+    if (deps?.cache) {
+      deps.cache.set(
+        { adapter: adapter.id, toolName, toolInput, cwd },
+        verdict
+      )
+    }
+    return verdict
   }
 
   // Cooldown check (file-based, persists across process invocations)
@@ -189,6 +219,12 @@ export async function processHookData(
   const rules = collect(cwd)
 
   if (rules.length === 0) {
+    if (deps?.cache) {
+      deps.cache.set(
+        { adapter: adapter.id, toolName, toolInput, cwd },
+        PASS
+      )
+    }
     return PASS
   }
 
@@ -235,6 +271,12 @@ export async function processHookData(
     reason: result.reason,
     source,
   })
+  if (deps?.cache) {
+    deps.cache.set(
+      { adapter: adapter.id, toolName, toolInput, cwd },
+      result
+    )
+  }
 
   return result
 }

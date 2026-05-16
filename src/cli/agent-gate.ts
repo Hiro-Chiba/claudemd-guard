@@ -23,6 +23,7 @@ import { formatFindings } from '../doctor/formatFindings'
 import { DaemonServer } from '../daemon/server'
 import { sendToDaemon } from '../daemon/client'
 import { defaultSocketPath } from '../daemon/protocol'
+import { DecisionCache } from '../cache/DecisionCache'
 
 const HELP_TEXT = `agent-gate — runtime enforcer for AI coding agent rules
 
@@ -95,6 +96,22 @@ function runHookMode(adapter: Adapter): void {
 async function runDaemon(): Promise<void> {
   const socketPath =
     process.env.AGENT_GATE_SOCKET_PATH ?? defaultSocketPath()
+
+  // Shared decision cache lives for the lifetime of the daemon, so every
+  // hook invocation benefits from prior verdicts.
+  const ttlSec = parseInt(
+    process.env.AGENT_GATE_CACHE_TTL_SEC ?? '60',
+    10
+  )
+  const maxEntries = parseInt(
+    process.env.AGENT_GATE_CACHE_SIZE ?? '256',
+    10
+  )
+  const cache = new DecisionCache({
+    ttlSec: Number.isNaN(ttlSec) ? 60 : ttlSec,
+    maxEntries: Number.isNaN(maxEntries) ? 256 : maxEntries,
+  })
+
   const server = new DaemonServer({
     socketPath,
     handler: async (req) => {
@@ -109,6 +126,7 @@ async function runDaemon(): Promise<void> {
       const result = await processHookData(req.payload, {
         adapter,
         cwd: req.cwd,
+        cache,
       })
       return { output: adapter.formatResponse(result) }
     },

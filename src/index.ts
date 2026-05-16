@@ -59,6 +59,13 @@ export type {
   Severity,
 } from './doctor/findings'
 
+// Cache
+export { DecisionCache } from './cache/DecisionCache'
+export type {
+  CacheKey,
+  DecisionCacheOptions,
+} from './cache/DecisionCache'
+
 // Daemon
 export { DaemonServer } from './daemon/server'
 export type { DaemonServerOptions, DaemonHandler } from './daemon/server'

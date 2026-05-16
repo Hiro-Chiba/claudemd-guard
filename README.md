@@ -90,6 +90,8 @@ Full options: see [docs/config.md](docs/config.md) (TODO) or `AgentGatePluginCon
 | `AGENT_GATE_USE_SDK` | `1` prefers the Anthropic agent SDK over API/CLI (no API key needed; works best with daemon mode) |
 | `AGENT_GATE_ON_ERROR` | `block` to fail-closed when a rule or AI client throws (default `allow`) |
 | `AGENT_GATE_DAEMON` | `1` routes through the daemon if it is running |
+| `AGENT_GATE_CACHE_TTL_SEC` | Daemon decision cache TTL in seconds (default `60`) |
+| `AGENT_GATE_CACHE_SIZE` | Daemon decision cache max entries (default `256`) |
 
 ## Supported AI tools
 
