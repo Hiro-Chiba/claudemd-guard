@@ -2,7 +2,6 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { createHash } from 'crypto'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { HookDataSchema } from '../contracts/schemas/hookDataSchema'
 import { ValidationResult } from '../contracts/types/ValidationResult'
 import { RuleSource } from '../contracts/types/RuleSource'
 import { IModelClient } from '../contracts/types/ModelClient'
@@ -14,9 +13,10 @@ import { AnthropicApi } from '../validation/models/AnthropicApi'
 import { DeterministicRule } from '../deterministic/types'
 import { runDeterministicRules } from '../deterministic/engine'
 import { defaultDeterministicRules } from '../deterministic/defaultRules'
+import { Adapter } from '../adapters/Adapter'
+import { claudeCodeAdapter } from '../adapters/claude-code/adapter'
 
 const PASS: ValidationResult = { decision: undefined, reason: '' }
-const HOOK_EVENT_PRE_TOOL_USE = 'PreToolUse'
 const COOLDOWN_DIR_NAME = 'agent-gate'
 
 export interface CooldownStore {
@@ -58,6 +58,7 @@ export interface ProcessHookDataDeps {
   cooldownStore?: CooldownStore
   cwd?: string
   deterministicRules?: DeterministicRule[]
+  adapter?: Adapter
 }
 
 export async function processHookData(
@@ -70,30 +71,12 @@ export async function processHookData(
     return PASS
   }
 
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(input)
-  } catch {
+  const adapter = deps?.adapter ?? claudeCodeAdapter
+  const parsed = adapter.parseHook(input)
+  if (parsed.kind === 'skip') {
     return PASS
   }
-
-  const parseResult = HookDataSchema.safeParse(parsed)
-  if (!parseResult.success) {
-    return PASS
-  }
-
-  const hookData = parseResult.data
-
-  // Only process PreToolUse events
-  if (hookData.hook_event_name !== HOOK_EVENT_PRE_TOOL_USE) {
-    return PASS
-  }
-
-  const toolName = hookData.tool_name
-  const toolInput = hookData.tool_input
-  if (!toolName || !toolInput) {
-    return PASS
-  }
+  const { toolName, toolInput } = parsed.action
 
   // Deterministic rules: a fast, cheap safety baseline that runs before
   // any cooldown or AI check. These rules catch catastrophic patterns

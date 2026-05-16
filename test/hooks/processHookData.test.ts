@@ -8,6 +8,7 @@ import { RuleSource } from '../../src/contracts/types/RuleSource'
 import { ValidationResult } from '../../src/contracts/types/ValidationResult'
 import { IModelClient } from '../../src/contracts/types/ModelClient'
 import { DeterministicRule } from '../../src/deterministic/types'
+import { cursorAdapter } from '../../src/adapters/cursor/adapter'
 
 const sampleClaudeMdFiles: RuleSource[] = [
   {
@@ -266,6 +267,44 @@ describe('processHookData', () => {
 
     expect(result.decision).toBe('block')
     expect(result.reason).toBe('safety baseline')
+  })
+
+  it('accepts a Cursor adapter and parses cursor payloads', async () => {
+    const blockingRule: DeterministicRule = {
+      id: 'test-block',
+      check: (toolName) =>
+        toolName === 'Bash'
+          ? { kind: 'block', reason: 'cursor bash blocked' }
+          : { kind: 'allow' },
+    }
+
+    const input = JSON.stringify({
+      hook_event_name: 'beforeShellExecution',
+      command: 'rm -rf /etc',
+    })
+
+    const result = await processHookData(input, {
+      config: new Config({ disabled: false }),
+      adapter: cursorAdapter,
+      deterministicRules: [blockingRule],
+    })
+
+    expect(result.decision).toBe('block')
+    expect(result.reason).toBe('cursor bash blocked')
+  })
+
+  it('passes through cursor afterFileEdit (post-event)', async () => {
+    const input = JSON.stringify({
+      hook_event_name: 'afterFileEdit',
+      file_path: '/p/a.ts',
+    })
+
+    const result = await processHookData(input, {
+      config: new Config({ disabled: false }),
+      adapter: cursorAdapter,
+    })
+
+    expect(result.decision).toBeUndefined()
   })
 
   it('validates again after cooldown expires', async () => {
