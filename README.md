@@ -3,13 +3,7 @@
 [![CI](https://github.com/Hiro-Chiba/agent-gate/actions/workflows/ci.yml/badge.svg)](https://github.com/Hiro-Chiba/agent-gate/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@hiro-c/agent-gate)](https://www.npmjs.com/package/@hiro-c/agent-gate)
 [![npm downloads](https://img.shields.io/npm/dm/@hiro-c/agent-gate)](https://www.npmjs.com/package/@hiro-c/agent-gate)
-[![bundle size](https://img.shields.io/bundlephobia/min/@hiro-c/agent-gate)](https://bundlephobia.com/package/@hiro-c/agent-gate)
 [![license](https://img.shields.io/npm/l/@hiro-c/agent-gate)](LICENSE)
-[![Node](https://img.shields.io/node/v/@hiro-c/agent-gate)](package.json)
-[![provenance](https://img.shields.io/badge/npm-provenance%20signed-blue?logo=github)](https://docs.npmjs.com/generating-provenance-statements)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript)](tsconfig.json)
-[![tests](https://img.shields.io/badge/tests-295%20passing-success)](https://github.com/Hiro-Chiba/agent-gate/actions)
-[![GitHub stars](https://img.shields.io/github/stars/Hiro-Chiba/agent-gate?style=social)](https://github.com/Hiro-Chiba/agent-gate)
 
 **Runtime rule enforcer for AI coding agents.** Reads your existing instruction files (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`, ...) and enforces them at hook time in Claude Code and Cursor.
 
