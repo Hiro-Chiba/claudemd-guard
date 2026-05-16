@@ -13,55 +13,48 @@ function isTemplate(filePath: string): boolean {
   return TEMPLATE_SUFFIXES.some((suffix) => filePath.endsWith(suffix))
 }
 
-function isSecretPath(filePath: string): boolean {
+function isBuiltInSecretPath(filePath: string): boolean {
   if (isTemplate(filePath)) return false
 
   const name = basename(filePath)
 
-  // .env, .env.local, .env.production, etc. (but not .env.example etc.)
-  if (name === '.env' || name.startsWith('.env.')) {
-    return true
-  }
-
-  // Any file under .ssh/
-  if (filePath.includes('/.ssh/')) {
-    return true
-  }
-
-  // .aws/credentials and .aws/config
-  if (/\/\.aws\/(credentials|config)$/.test(filePath)) {
-    return true
-  }
-
-  // Private key file extensions
-  if (/\.(pem|key)$/.test(name)) {
-    return true
-  }
-
-  // Common private key filenames
-  if (/^id_(rsa|ed25519|ecdsa|dsa)$/.test(name)) {
-    return true
-  }
-
-  // .netrc
-  if (name === '.netrc') {
-    return true
-  }
+  if (name === '.env' || name.startsWith('.env.')) return true
+  if (filePath.includes('/.ssh/')) return true
+  if (/\/\.aws\/(credentials|config)$/.test(filePath)) return true
+  if (/\.(pem|key)$/.test(name)) return true
+  if (/^id_(rsa|ed25519|ecdsa|dsa)$/.test(name)) return true
+  if (name === '.netrc') return true
 
   return false
 }
 
-export const preventSecretFileWrite: DeterministicRule = {
-  id: 'prevent-secret-file-write',
-  check(toolName, toolInput): RuleVerdict {
-    if (!TOOLS_THAT_WRITE.has(toolName)) return { kind: 'allow' }
-    const filePath = toolInput.file_path
-    if (typeof filePath !== 'string') return { kind: 'allow' }
-    if (!isSecretPath(filePath)) return { kind: 'allow' }
-
-    return {
-      kind: 'block',
-      reason: `Refusing to write to a likely secret/credential file: ${filePath}. If this is intentional, edit the file outside of the agent.`,
-    }
-  },
+export interface PreventSecretFileWriteOptions {
+  extraSecretPathPrefixes?: string[]
 }
+
+export function preventSecretFileWriteWith(
+  opts?: PreventSecretFileWriteOptions
+): DeterministicRule {
+  const extras = opts?.extraSecretPathPrefixes ?? []
+  return {
+    id: 'prevent-secret-file-write',
+    check(toolName, toolInput): RuleVerdict {
+      if (!TOOLS_THAT_WRITE.has(toolName)) return { kind: 'allow' }
+      const filePath = toolInput.file_path
+      if (typeof filePath !== 'string') return { kind: 'allow' }
+      if (isTemplate(filePath)) return { kind: 'allow' }
+
+      const builtIn = isBuiltInSecretPath(filePath)
+      const extra = extras.some((prefix) => filePath.includes(prefix))
+      if (!builtIn && !extra) return { kind: 'allow' }
+
+      return {
+        kind: 'block',
+        reason: `Refusing to write to a likely secret/credential file: ${filePath}. If this is intentional, edit the file outside of the agent.`,
+      }
+    },
+  }
+}
+
+export const preventSecretFileWrite: DeterministicRule =
+  preventSecretFileWriteWith()
