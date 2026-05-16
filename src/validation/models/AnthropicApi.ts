@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { Config } from '../../config/Config'
 import { IModelClient } from '../../contracts/types/ModelClient'
-import { SYSTEM_PROMPT } from '../prompts/system-prompt'
+import { getSystemPrompt } from '../prompts/system-prompt'
 
 const API_MAX_TOKENS = 1024
 
@@ -19,7 +19,7 @@ export class AnthropicApi implements IModelClient {
   async ask(prompt: string): Promise<string> {
     const response = await this.client.messages.create({
       model: this.config.model,
-      system: SYSTEM_PROMPT,
+      system: getSystemPrompt(this.config.reasonLang),
       max_tokens: API_MAX_TOKENS,
       messages: [
         {
