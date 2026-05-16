@@ -54,6 +54,7 @@ To register against Cursor instead of Claude Code, run the binary with `--agent 
 | `AGENT_GATE_DISABLED` | `false` | Set to `true` to disable the whole tool |
 | `AGENT_GATE_DISABLED_RULES` | (none) | Comma-separated rule ids to disable, merged with the config file |
 | `AGENT_GATE_LOG` | (none) | Set to `1` to append decisions to `~/.agent-gate/log.jsonl` |
+| `AGENT_GATE_REASON_LANG` | `auto` | Language for AI-generated `reason` text. `auto` matches the instruction files (English fallback when mixed). Pass `en`, `ja`, `zh`, `ko`, etc. to force a specific language |
 | `USE_SYSTEM_CLAUDE` | `false` | `true` forces PATH `claude` (default: `~/.claude/local/claude` with PATH fallback) |
 
 ### Project config file: `.agent-gate.json`

@@ -1,4 +1,4 @@
-export const SYSTEM_PROMPT = `You are a guardrail for an AI coding agent.
+const BASE_PROMPT = `You are a guardrail for an AI coding agent.
 Your job is to evaluate whether the agent's upcoming tool operation
 violates any project rules.
 
@@ -20,3 +20,51 @@ When you do block, the "reason" field MUST do two things:
    Treat the reason as guidance, not just a denial. The agent reads
    the reason and uses it to decide what to do next, so the more
    actionable the guidance, the better.`
+
+const HUMANIZED_LANGS: Record<string, string> = {
+  en: 'English',
+  ja: 'Japanese',
+  zh: 'Chinese',
+  ko: 'Korean',
+  fr: 'French',
+  de: 'German',
+  es: 'Spanish',
+  pt: 'Portuguese',
+  it: 'Italian',
+  ru: 'Russian',
+  tr: 'Turkish',
+  ar: 'Arabic',
+}
+
+function humanizeLang(code: string): string {
+  const lower = code.toLowerCase()
+  return HUMANIZED_LANGS[lower] ?? code
+}
+
+function buildLanguageDirective(reasonLang: string | undefined): string {
+  if (reasonLang && reasonLang.toLowerCase() !== 'auto') {
+    return `Output language:
+- Always write the "reason" field in ${humanizeLang(reasonLang)},
+  regardless of the language used in the instruction files. If you
+  quote a rule that was written in a different language, keep the
+  quote in its original language but write the surrounding guidance
+  in ${humanizeLang(reasonLang)}.`
+  }
+  return `Output language:
+- Match the dominant language of the instruction files when writing
+  the "reason" field. If the files are mixed or ambiguous, default to
+  English. This default keeps reasons grep-friendly for users who
+  share logs across teams.`
+}
+
+export function getSystemPrompt(reasonLang?: string): string {
+  return `${BASE_PROMPT}
+
+${buildLanguageDirective(reasonLang)}`
+}
+
+/**
+ * Backwards-compatible constant export used by older callers and tests.
+ * Equivalent to getSystemPrompt() with auto language behavior.
+ */
+export const SYSTEM_PROMPT = getSystemPrompt()

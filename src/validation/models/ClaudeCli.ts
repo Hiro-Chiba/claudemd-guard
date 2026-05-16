@@ -4,7 +4,7 @@ import { homedir } from 'os'
 import { existsSync, mkdirSync } from 'fs'
 import { IModelClient } from '../../contracts/types/ModelClient'
 import { Config } from '../../config/Config'
-import { SYSTEM_PROMPT } from '../prompts/system-prompt'
+import { getSystemPrompt } from '../prompts/system-prompt'
 
 const CLI_TIMEOUT_MS = 60_000
 const CLI_MAX_TURNS = '1'
@@ -22,7 +22,7 @@ export class ClaudeCli implements IModelClient {
   async ask(prompt: string): Promise<string> {
     const claudeBinary = this.getClaudeBinary()
 
-    const fullPrompt = `${SYSTEM_PROMPT}\n\n${prompt}`
+    const fullPrompt = `${getSystemPrompt(this.config.reasonLang)}\n\n${prompt}`
 
     const args = [
       '-',
