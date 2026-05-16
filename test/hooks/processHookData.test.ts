@@ -9,6 +9,12 @@ import { ValidationResult } from '../../src/contracts/types/ValidationResult'
 import { IModelClient } from '../../src/contracts/types/ModelClient'
 import { DeterministicRule } from '../../src/deterministic/types'
 import { cursorAdapter } from '../../src/adapters/cursor/adapter'
+import { claudeCodeAdapter } from '../../src/adapters/claude-code/adapter'
+import { Adapter } from '../../src/adapters/Adapter'
+import {
+  SessionContext,
+  SessionEvent,
+} from '../../src/contracts/types/SessionContext'
 
 const sampleClaudeMdFiles: RuleSource[] = [
   {
@@ -379,6 +385,71 @@ describe('processHookData', () => {
 
     expect(result.decision).toBe('block')
     expect(result.reason).toBe('DROP TABLE forbidden. Use a migration.')
+  })
+
+  it('threads SessionContext history from the adapter into deterministic rules', async () => {
+    const history: SessionEvent[] = [
+      { kind: 'tool-call', toolName: 'Bash', toolInput: { command: 'echo a' } },
+      { kind: 'tool-call', toolName: 'Bash', toolInput: { command: 'echo b' } },
+    ]
+    const adapter: Adapter = {
+      ...claudeCodeAdapter,
+      readHistory: async () => history,
+    }
+    const captured: SessionContext[] = []
+    const rule: DeterministicRule = {
+      id: 'history-aware',
+      check: (toolName, _input, ctx) => {
+        if (ctx) captured.push(ctx)
+        if (ctx && ctx.history.length >= 2) {
+          return { kind: 'block', reason: 'too many recent calls' }
+        }
+        return { kind: 'allow' }
+      },
+    }
+
+    const input = JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'Bash',
+      tool_input: { command: 'echo c' },
+    })
+    const result = await processHookData(input, {
+      config: new Config({ disabled: false }),
+      adapter,
+      deterministicRules: [rule],
+    })
+
+    expect(captured).toHaveLength(1)
+    expect(captured[0].history.map((e) => e.toolInput?.command)).toEqual([
+      'echo a',
+      'echo b',
+    ])
+    expect(result.decision).toBe('block')
+  })
+
+  it('uses empty history when the adapter has no readHistory method', async () => {
+    const adapterNoHistory: Adapter = { ...claudeCodeAdapter }
+    delete (adapterNoHistory as { readHistory?: unknown }).readHistory
+
+    let observedHistoryLen = -1
+    const rule: DeterministicRule = {
+      id: 'observe',
+      check: (_t, _i, ctx) => {
+        if (ctx) observedHistoryLen = ctx.history.length
+        return { kind: 'allow' }
+      },
+    }
+    const input = JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'Bash',
+      tool_input: { command: 'echo' },
+    })
+    await processHookData(input, {
+      config: new Config({ disabled: false }),
+      adapter: adapterNoHistory,
+      deterministicRules: [rule],
+    })
+    expect(observedHistoryLen).toBe(0)
   })
 
   it('validates again after cooldown expires', async () => {

@@ -1,7 +1,9 @@
-import { Adapter } from '../Adapter'
+import { Adapter, ReadHistoryOptions } from '../Adapter'
 import { ParsedHook } from '../../contracts/types/Action'
 import { ValidationResult } from '../../contracts/types/ValidationResult'
 import { HookDataSchema } from '../../contracts/schemas/hookDataSchema'
+import { SessionEvent } from '../../contracts/types/SessionContext'
+import { readClaudeCodeTranscript } from './transcript'
 
 const HOOK_EVENT_PRE_TOOL_USE = 'PreToolUse'
 
@@ -44,5 +46,9 @@ export const claudeCodeAdapter: Adapter = {
     }
     // Allow case: Claude Code expects no `decision` key (or null) for allow.
     return JSON.stringify({ reason: result.reason })
+  },
+
+  async readHistory(opts: ReadHistoryOptions): Promise<SessionEvent[]> {
+    return readClaudeCodeTranscript({ cwd: opts.cwd, limit: opts.limit })
   },
 }

@@ -26,6 +26,10 @@ import {
   DecisionLogEntry,
   DecisionSource,
 } from '../observability/decisionLogger'
+import {
+  SessionContext,
+  SessionEvent,
+} from '../contracts/types/SessionContext'
 
 const PASS: ValidationResult = { decision: undefined, reason: '' }
 const COOLDOWN_DIR_NAME = 'agent-gate'
@@ -116,6 +120,22 @@ export async function processHookData(
   const cwd = deps?.cwd ?? process.cwd()
   const agentGateConfig = deps?.agentGateConfig ?? loadAgentGateConfig(cwd)
 
+  // Build SessionContext (history from adapter, projectRoot defaults to cwd
+  // for v1; future work can detect the actual project root).
+  let history: SessionEvent[] = []
+  if (typeof adapter.readHistory === 'function') {
+    try {
+      history = await adapter.readHistory({ cwd, limit: 20 })
+    } catch {
+      history = []
+    }
+  }
+  const sessionContext: SessionContext = {
+    cwd,
+    projectRoot: cwd,
+    history,
+  }
+
   // Deterministic rules: a fast, cheap safety baseline that runs before
   // any cooldown or AI check.
   const deterministicRules =
@@ -124,7 +144,8 @@ export async function processHookData(
   const ruleVerdict = runDeterministicRules(
     toolName,
     toolInput,
-    deterministicRules
+    deterministicRules,
+    sessionContext
   )
   if (ruleVerdict.kind === 'block') {
     maybeLog(deps, {

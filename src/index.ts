@@ -13,6 +13,10 @@ export type { HookData } from './contracts/types/HookData'
 export type { IModelClient } from './contracts/types/ModelClient'
 export type { RuleSource, RuleSourceKind } from './contracts/types/RuleSource'
 export type { Action, ParsedHook } from './contracts/types/Action'
+export type {
+  SessionContext,
+  SessionEvent,
+} from './contracts/types/SessionContext'
 
 // Schemas
 export { HookDataSchema } from './contracts/schemas/hookDataSchema'
@@ -35,7 +39,7 @@ export {
 // Adapters
 export { claudeCodeAdapter } from './adapters/claude-code/adapter'
 export { cursorAdapter } from './adapters/cursor/adapter'
-export type { Adapter } from './adapters/Adapter'
+export type { Adapter, ReadHistoryOptions } from './adapters/Adapter'
 
 // Core
 export { collectRuleSources } from './collector/collectRuleSources'
