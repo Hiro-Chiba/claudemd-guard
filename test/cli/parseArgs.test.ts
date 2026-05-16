@@ -38,4 +38,14 @@ describe('parseArgs', () => {
     const r = parseArgs(['--version'])
     expect(r.showVersion).toBe(true)
   })
+
+  it('defaults ai to false', () => {
+    expect(parseArgs([]).ai).toBe(false)
+  })
+
+  it('detects --ai', () => {
+    const r = parseArgs(['lint', '--ai'])
+    expect(r.ai).toBe(true)
+    expect(r.positional).toEqual(['lint'])
+  })
 })

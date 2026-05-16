@@ -6,6 +6,9 @@ export type FindingCode =
   | 'empty-file'
   | 'ambiguous-modifier'
   | 'no-concrete-rules'
+  | 'ambiguity'
+  | 'contradiction'
+  | 'missing-imperative'
 
 export interface Finding {
   ruleSourcePath: string

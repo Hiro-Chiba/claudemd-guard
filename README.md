@@ -74,7 +74,7 @@ Full options: see [docs/config.md](docs/config.md) (TODO) or `AgentGatePluginCon
 |---|---|
 | `agent-gate` | Run as hook (reads stdin, used internally) |
 | `agent-gate install` / `uninstall` | Register or remove the Claude Code hook |
-| `agent-gate lint` | Audit instruction files for ambiguity, emptiness, missing rules |
+| `agent-gate lint [--ai]` | Audit instruction files for ambiguity, emptiness, missing rules. `--ai` adds AI-driven contradiction / ambiguity / missing-imperative checks |
 | `agent-gate stats` | Summarize the decision log (after `AGENT_GATE_LOG=1`) |
 | `agent-gate daemon` | Long-lived server on a Unix socket (opt-in speedup, set `AGENT_GATE_DAEMON=1`) |
 

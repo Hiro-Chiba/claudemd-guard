@@ -52,6 +52,7 @@ export type {
 
 // Doctor (CLAUDE.md linter)
 export { lintRuleSources } from './doctor/lintRuleSources'
+export { lintRuleSourcesWithAi } from './doctor/lintRuleSourcesWithAi'
 export { formatFindings } from './doctor/formatFindings'
 export type {
   Finding,
