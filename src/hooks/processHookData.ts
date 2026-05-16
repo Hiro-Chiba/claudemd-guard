@@ -12,9 +12,13 @@ import { ClaudeCli } from '../validation/models/ClaudeCli'
 import { AnthropicApi } from '../validation/models/AnthropicApi'
 import { DeterministicRule } from '../deterministic/types'
 import { runDeterministicRules } from '../deterministic/engine'
-import { defaultDeterministicRules } from '../deterministic/defaultRules'
+import { buildDefaultDeterministicRules } from '../deterministic/defaultRules'
 import { Adapter } from '../adapters/Adapter'
 import { claudeCodeAdapter } from '../adapters/claude-code/adapter'
+import {
+  AgentGateConfig,
+  loadAgentGateConfig,
+} from '../config/AgentGateConfig'
 
 const PASS: ValidationResult = { decision: undefined, reason: '' }
 const COOLDOWN_DIR_NAME = 'agent-gate'
@@ -52,6 +56,7 @@ class FileCooldownStore implements CooldownStore {
 
 export interface ProcessHookDataDeps {
   config?: Config
+  agentGateConfig?: AgentGateConfig
   collectFn?: (cwd: string) => RuleSource[]
   validatorFn?: typeof validator
   getModelClient?: (config: Config) => IModelClient
@@ -78,12 +83,17 @@ export async function processHookData(
   }
   const { toolName, toolInput } = parsed.action
 
+  // Resolve cwd early so the agent-gate config can be loaded relative to it.
+  const cwd = deps?.cwd ?? process.cwd()
+  const agentGateConfig = deps?.agentGateConfig ?? loadAgentGateConfig(cwd)
+
   // Deterministic rules: a fast, cheap safety baseline that runs before
   // any cooldown or AI check. These rules catch catastrophic patterns
   // (rm -rf root, writes to secret stores, etc.) and short-circuit
   // the rest of the pipeline.
   const deterministicRules =
-    deps?.deterministicRules ?? defaultDeterministicRules
+    deps?.deterministicRules ??
+    buildDefaultDeterministicRules(agentGateConfig)
   const ruleVerdict = runDeterministicRules(
     toolName,
     toolInput,
@@ -94,7 +104,6 @@ export async function processHookData(
   }
 
   // Cooldown check (file-based, persists across process invocations)
-  const cwd = deps?.cwd ?? process.cwd()
   const cooldownStore =
     config.cooldown > 0
       ? deps?.cooldownStore ?? new FileCooldownStore()

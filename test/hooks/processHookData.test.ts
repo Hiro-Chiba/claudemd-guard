@@ -307,6 +307,44 @@ describe('processHookData', () => {
     expect(result.decision).toBeUndefined()
   })
 
+  it('allows a disabled deterministic rule via agentGateConfig', async () => {
+    const input = JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'Bash',
+      tool_input: { command: 'rm -rf /' },
+    })
+
+    const result = await processHookData(input, {
+      config: new Config({ disabled: false }),
+      collectFn: () => [],
+      agentGateConfig: {
+        disabledRules: ['prevent-rm-rf-root'],
+      },
+    })
+
+    // With the rm-rf rule disabled and no CLAUDE.md present, the request
+    // passes through (collect returns empty -> PASS).
+    expect(result.decision).toBeUndefined()
+  })
+
+  it('uses custom protectedBranches from agentGateConfig', async () => {
+    const input = JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'Bash',
+      tool_input: { command: 'git push --force origin custom-prod' },
+    })
+
+    const result = await processHookData(input, {
+      config: new Config({ disabled: false }),
+      agentGateConfig: {
+        disabledRules: [],
+        protectedBranches: ['custom-prod'],
+      },
+    })
+
+    expect(result.decision).toBe('block')
+  })
+
   it('validates again after cooldown expires', async () => {
     let callCount = 0
     const mockValidator = async () => {

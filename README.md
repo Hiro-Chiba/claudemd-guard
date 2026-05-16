@@ -36,13 +36,34 @@ To remove the hook, run `./uninstall.sh` from the same directory.
 
 ## Configuration
 
+### Environment variables
+
 | Variable | Default | Description |
 |---|---|---|
 | `AGENT_GATE_MODEL` | `claude-sonnet-4-6` | Model used for validation |
 | `AGENT_GATE_API_KEY` | — | Anthropic API key (uses API directly when set) |
 | `AGENT_GATE_COOLDOWN` | `0` | Cooldown in seconds (0 = validate every time) |
-| `AGENT_GATE_DISABLED` | `false` | Disable flag |
+| `AGENT_GATE_DISABLED` | `false` | Disable the whole tool |
+| `AGENT_GATE_DISABLED_RULES` | — | Comma-separated rule ids to disable, merged with the config file |
 | `USE_SYSTEM_CLAUDE` | `false` | `true` forces PATH claude (default: `~/.claude/local/claude`, falls back to PATH if not found) |
+
+### Project config file: `.agent-gate.json`
+
+Place an `.agent-gate.json` in the project root (or any parent directory) to customize the deterministic baseline.
+
+```json
+{
+  "disabled_rules": ["prevent-force-push-main"],
+  "protected_branches": ["main", "release"],
+  "extra_secret_paths": ["vault/", "secrets/"]
+}
+```
+
+| Field | Effect |
+|---|---|
+| `disabled_rules` | List of rule ids that will not run. Merged with `AGENT_GATE_DISABLED_RULES`. |
+| `protected_branches` | Overrides the default list used by `prevent-force-push-main`. |
+| `extra_secret_paths` | Additional path substrings treated as secret targets by `prevent-secret-file-write` (alongside the built-in list). |
 
 ## How It Works
 
