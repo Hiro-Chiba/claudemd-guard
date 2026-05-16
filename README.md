@@ -60,7 +60,9 @@ These run by default with no configuration required.
 |---|---|
 | `prevent-rm-rf-root` | Recursive `rm` on `/`, `$HOME`, `~`, `/etc`, `/usr`, `/var`, and other catastrophic paths. Handles `sudo` prefix and flag variants (`-rf`, `-fr`, `-Rf`). |
 | `prevent-secret-file-write` | `Edit`/`Write` on `.env*` (non-template), `.ssh/*`, `.aws/credentials`, `*.pem`, `*.key`, `id_rsa`, `.netrc`, etc. |
+| `prevent-bash-secret-write` | Shell redirects to the same secret paths via `>`, `>>`, or `tee`. Catches `echo X > .env`, `cat > ~/.ssh/id_rsa`. |
 | `prevent-force-push-main` | `git push --force` or `-f` to `main`, `master`, `develop`, `production`, `release`, `stable`. Allows `--force-with-lease`. |
+| `prevent-system-path-write` | `Edit`/`Write` to `/etc`, `/usr`, `/var`, `/System`, `/Library`, `/opt`, and other system-owned paths. |
 
 ## Network Access
 
