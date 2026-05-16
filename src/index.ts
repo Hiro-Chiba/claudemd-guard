@@ -41,6 +41,10 @@ export { claudeCodeAdapter } from './adapters/claude-code/adapter'
 export { cursorAdapter } from './adapters/cursor/adapter'
 export type { Adapter, ReadHistoryOptions } from './adapters/Adapter'
 
+// Model clients (for users wiring up custom AI fallback chains)
+export { CompositeModelClient } from './validation/models/CompositeModelClient'
+export type { CompositeModelClientOptions } from './validation/models/CompositeModelClient'
+
 // Observability
 export { EventBus } from './observability/eventBus'
 export { JsonlFileSink } from './observability/sinks/JsonlFileSink'
