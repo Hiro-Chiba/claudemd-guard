@@ -5,17 +5,18 @@
 [![npm downloads](https://img.shields.io/npm/dt/@hiro-c/agent-gate)](https://www.npmjs.com/package/@hiro-c/agent-gate)
 [![license](https://img.shields.io/npm/l/@hiro-c/agent-gate)](LICENSE)
 
-**Runtime rule enforcer for AI coding agents.** Reads your existing instruction files (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`, ...) and enforces them at hook time in Claude Code and Cursor.
+**Runtime rule enforcer for AI coding agents.** Reads your existing instruction files (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`, ...) and enforces them at hook time in Claude Code, Gemini CLI, and Cursor.
 
 ## What it does
 
-- **Stops catastrophic operations** before AI ever sees them: `rm -rf /`, writes to `.env` / `.ssh/*`, force-push to `main`, edits to `/etc`.
+- **Stops catastrophic operations** before AI ever sees them: `rm -rf /`, writes to `.env` / `.ssh/*`, force-push to `main`, edits to `/etc`. (Supports `Bash`, `Write`, `Edit` in Claude Code; `run_shell_command`, `write_file`, `replace` in Gemini CLI).
 - **Aggregates 8 instruction file formats** into one rule set the AI uses to decide on the remaining cases.
 - **Returns guidance, not denials**: block reasons describe the next correct step the agent should take.
 - **Audits your rule files** with `agent-gate lint` (detects vague rules and ambiguous modifiers like "適切に" / "where possible").
 
 ## Install
 
+### Claude Code
 ```bash
 npm install -g @hiro-c/agent-gate
 agent-gate install
@@ -23,11 +24,18 @@ agent-gate install
 
 `agent-gate install` registers the Claude Code PreToolUse hook in `~/.claude/settings.json`. Restart Claude Code to activate. Use `agent-gate uninstall` to remove.
 
+### Gemini CLI
+Use the `agent-gate-wrapper` in your project or point your hook config at:
+```bash
+agent-gate --agent gemini-cli
+```
+
+### Cursor
 For Cursor 1.7, point your hook config at `agent-gate --agent cursor`.
 
 ## How it works
 
-Every `Edit` / `Write` / `Bash` call from the agent goes through:
+Every `Edit` / `Write` / `Bash` (or `replace` / `write_file` / `run_shell_command`) call from the agent goes through:
 
 ```
 hook payload → adapter → deterministic rules → AI validation → verdict
@@ -101,13 +109,6 @@ Full options: see [docs/config.md](docs/config.md) (TODO) or `AgentGatePluginCon
 - **Claude Code** (mature, default).
 - **Gemini CLI** (fully supported, `--agent gemini-cli`; features high-precision transcript parsing).
 - **Cursor 1.7** (beta, `--agent cursor`; payload mapping is best-effort against public docs).
-
-Other tools (Copilot, Cline, Aider, Codex web, Replit, Devin) lack a hook surface and cannot be enforced at runtime.
-
-## License
-
-[MIT](LICENSE)
-sor 1.7** (beta, `--agent cursor`; payload mapping is best-effort against public docs).
 
 Other tools (Copilot, Cline, Aider, Codex web, Replit, Devin) lack a hook surface and cannot be enforced at runtime.
 
