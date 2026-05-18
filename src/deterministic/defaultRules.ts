@@ -1,5 +1,6 @@
 import { DeterministicRule } from './types'
 import { preventRmRfRoot } from './rules/preventRmRfRoot'
+import { preventSecretFileRead } from './rules/preventSecretFileRead'
 import { preventSecretFileWriteWith } from './rules/preventSecretFileWrite'
 import { preventBashSecretWrite } from './rules/preventBashSecretWrite'
 import { preventForcePushMainWith } from './rules/preventForcePushMain'
@@ -17,6 +18,7 @@ export function buildDefaultDeterministicRules(
 ): DeterministicRule[] {
   const builtIn: DeterministicRule[] = [
     preventRmRfRoot,
+    preventSecretFileRead,
     preventSecretFileWriteWith({
       extraSecretPathPrefixes: config?.extraSecretPathPrefixes,
     }),

@@ -51,10 +51,11 @@ Run by default, disable per-rule in `.agent-gate.json` if needed.
 | Rule | Blocks |
 |---|---|
 | `prevent-rm-rf-root` | `rm -rf` on `/`, `$HOME`, `~`, `/etc`, `/usr`, `/var`, etc. (handles `sudo`, flag variants). |
-| `prevent-secret-file-write` | `Edit`/`Write` to `.env*`, `.ssh/*`, `.aws/credentials`, `*.pem`, `*.key`, `id_rsa`. |
+| `prevent-secret-file-read` | `read_file` / `read_many_files` / `Read` to `.env*`, `.ssh/*`, `.aws/credentials`, `*.pem`, `*.key`. |
+| `prevent-secret-file-write` | `Edit`/`Write`/`write_file`/`replace` to `.env*`, `.ssh/*`, `.aws/credentials`, `*.pem`, `*.key`. |
 | `prevent-bash-secret-write` | Shell redirects to the same paths (`echo > .env`, `tee .ssh/id_rsa`). |
 | `prevent-force-push-main` | `git push --force` to `main`, `master`, `develop`, `release`, etc. Allows `--force-with-lease`. |
-| `prevent-system-path-write` | `Edit`/`Write` to `/etc`, `/usr`, `/System`, `/Library`. |
+| `prevent-system-path-write` | `Edit`/`Write`/`write_file`/`replace` to `/etc`, `/usr`, `/System`, `/Library`. |
 
 ## Config
 
