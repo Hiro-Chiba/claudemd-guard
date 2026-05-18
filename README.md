@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Hiro-Chiba/agent-gate/actions/workflows/ci.yml/badge.svg)](https://github.com/Hiro-Chiba/agent-gate/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@hiro-c/agent-gate)](https://www.npmjs.com/package/@hiro-c/agent-gate)
-[![npm downloads](https://img.shields.io/npm/dm/@hiro-c/agent-gate)](https://www.npmjs.com/package/@hiro-c/agent-gate)
+[![npm downloads](https://img.shields.io/npm/dt/@hiro-c/agent-gate)](https://www.npmjs.com/package/@hiro-c/agent-gate)
 [![license](https://img.shields.io/npm/l/@hiro-c/agent-gate)](LICENSE)
 
 **Runtime rule enforcer for AI coding agents.** Reads your existing instruction files (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`, ...) and enforces them at hook time in Claude Code and Cursor.
