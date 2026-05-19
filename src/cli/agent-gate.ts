@@ -240,9 +240,14 @@ export function parseArgs(args: string[]): ParsedArgs {
 }
 
 function main(): void {
-  try {
-    const parsedArgs = parseArgs(process.argv.slice(2))
+  const args = process.argv.slice(2)
+  const parsedArgs = parseArgs(args)
 
+  // A heuristic to detect if we are running in "hook mode" (no positional subcommands).
+  // Positional subcommands are 'install', 'lint', 'stats', etc.
+  const isHookMode = parsedArgs.positional.length === 0
+
+  try {
     if (parsedArgs.showHelp) {
       console.log(HELP_TEXT)
       return
@@ -254,9 +259,8 @@ function main(): void {
 
     const adapter = getAdapter(parsedArgs.agentId)
     if (!adapter) {
-      // In hook mode, we MUST provide a valid JSON response even if the adapter is unknown
-      const subcommand = parsedArgs.positional[0]
-      if (subcommand === undefined) {
+      if (isHookMode) {
+        // Fallback for unknown adapter in hook mode
         console.log(JSON.stringify({ decision: 'allow', reason: `Unknown adapter: ${parsedArgs.agentId}` }))
         process.exit(0)
       }
@@ -295,15 +299,31 @@ function main(): void {
         process.exit(1)
     }
   } catch (error) {
-    // Ultimate safety net: if we are likely in hook mode (no subcommand), 
-    // always emit allow and exit 0.
-    if (process.argv.slice(2).every(arg => arg.startsWith('-'))) {
-      console.error('Fatal agent-gate error:', error)
-      console.log(JSON.stringify({ decision: 'allow', reason: `Fatal error: ${error instanceof Error ? error.message : String(error)}` }))
-      process.exit(0)
+    if (isHookMode) {
+      handleHookError(error, parsedArgs.agentId)
+      return
     }
     throw error
   }
+}
+
+/**
+ * Ensures that hook mode always exits cleanly with a valid response,
+ * even if a fatal crash occurs during startup.
+ */
+function handleHookError(error: unknown, agentId: string): void {
+  const message = error instanceof Error ? error.message : String(error)
+  console.error('Fatal agent-gate error:', error)
+
+  // Try to use the adapter's formatter if possible, otherwise fallback to raw JSON
+  const adapter = getAdapter(agentId)
+  if (adapter) {
+    console.log(adapter.formatResponse({ decision: undefined, reason: `Fatal error: ${message}` }))
+  } else {
+    // Gemini CLI and most others accept this shape
+    console.log(JSON.stringify({ decision: 'allow', reason: `Fatal error: ${message}` }))
+  }
+  process.exit(0)
 }
 
 function runStats(): void {
