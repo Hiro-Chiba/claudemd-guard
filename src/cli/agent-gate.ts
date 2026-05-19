@@ -240,52 +240,69 @@ export function parseArgs(args: string[]): ParsedArgs {
 }
 
 function main(): void {
-  const parsedArgs = parseArgs(process.argv.slice(2))
+  try {
+    const parsedArgs = parseArgs(process.argv.slice(2))
 
-  if (parsedArgs.showHelp) {
-    console.log(HELP_TEXT)
-    return
-  }
-  if (parsedArgs.showVersion) {
-    printVersion()
-    return
-  }
+    if (parsedArgs.showHelp) {
+      console.log(HELP_TEXT)
+      return
+    }
+    if (parsedArgs.showVersion) {
+      printVersion()
+      return
+    }
 
-  const adapter = getAdapter(parsedArgs.agentId)
-  if (!adapter) {
-    console.error(
-      `Unknown adapter: ${parsedArgs.agentId}. Available: ${availableAdapterIds().join(', ')}`
-    )
-    process.exit(1)
-  }
-
-  const subcommand = parsedArgs.positional[0]
-  switch (subcommand) {
-    case undefined:
-      runHookMode(adapter)
-      return
-    case 'install':
-      runInstall()
-      return
-    case 'uninstall':
-      runUninstall()
-      return
-    case 'stats':
-      runStats()
-      return
-    case 'suggest':
-      runSuggest()
-      return
-    case 'lint':
-      void runLint(parsedArgs.ai)
-      return
-    case 'daemon':
-      void runDaemon()
-      return
-    default:
-      console.error(`Unknown subcommand: ${subcommand}`)
-      console.error(HELP_TEXT)
+    const adapter = getAdapter(parsedArgs.agentId)
+    if (!adapter) {
+      // In hook mode, we MUST provide a valid JSON response even if the adapter is unknown
+      const subcommand = parsedArgs.positional[0]
+      if (subcommand === undefined) {
+        console.log(JSON.stringify({ decision: 'allow', reason: `Unknown adapter: ${parsedArgs.agentId}` }))
+        process.exit(0)
+      }
+      console.error(
+        `Unknown adapter: ${parsedArgs.agentId}. Available: ${availableAdapterIds().join(', ')}`
+      )
       process.exit(1)
+    }
+
+    const subcommand = parsedArgs.positional[0]
+    switch (subcommand) {
+      case undefined:
+        runHookMode(adapter)
+        return
+      case 'install':
+        runInstall()
+        return
+      case 'uninstall':
+        runUninstall()
+        return
+      case 'stats':
+        runStats()
+        return
+      case 'suggest':
+        runSuggest()
+        return
+      case 'lint':
+        void runLint(parsedArgs.ai)
+        return
+      case 'daemon':
+        void runDaemon()
+        return
+      default:
+        console.error(`Unknown subcommand: ${subcommand}`)
+        console.error(HELP_TEXT)
+        process.exit(1)
+    }
+  } catch (error) {
+    // Ultimate safety net: if we are likely in hook mode (no subcommand), 
+    // always emit allow and exit 0.
+    if (process.argv.slice(2).every(arg => arg.startsWith('-'))) {
+      console.error('Fatal agent-gate error:', error)
+      console.log(JSON.stringify({ decision: 'allow', reason: `Fatal error: ${error instanceof Error ? error.message : String(error)}` }))
+      process.exit(0)
+    }
+    throw error
   }
 }
 
