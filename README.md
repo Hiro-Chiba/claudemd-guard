@@ -108,7 +108,7 @@ Full options: see [docs/config.md](docs/config.md) (TODO) or `AgentGatePluginCon
 ## Supported AI tools
 
 - **Claude Code** (mature, default).
-- **Gemini CLI** (fully supported, `--agent gemini-cli`; features high-precision transcript parsing).
+- **Gemini CLI** (supported, `--agent gemini-cli`). Transcript history is opportunistic: Gemini CLI's hook currently passes an empty `transcript_path` ([issue #14715](https://github.com/google-gemini/gemini-cli/issues/14715)), so history is empty until upstream lands. The adapter is forward-compatible with the planned JSONL schema ([issue #15292](https://github.com/google-gemini/gemini-cli/issues/15292)) and the legacy JSON-array form.
 - **Cursor 1.7** (beta, `--agent cursor`; payload mapping is best-effort against public docs).
 
 Other tools (Copilot, Cline, Aider, Codex web, Replit, Devin) lack a hook surface and cannot be enforced at runtime.
