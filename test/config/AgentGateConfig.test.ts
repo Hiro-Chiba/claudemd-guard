@@ -1,19 +1,28 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdirSync, writeFileSync, rmSync } from 'fs'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import * as fs from 'fs'
 import { join } from 'path'
 import {
   loadAgentGateConfig,
 } from '../../src/config/AgentGateConfig'
 
-const TEST_DIR = join(__dirname, '..', '..', 'tmp', 'test-agent-gate-config')
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs')>()
+  return {
+    ...actual,
+    existsSync: vi.fn(),
+    readFileSync: vi.fn(),
+  }
+})
+
+const TEST_DIR = '/mock/test/dir'
 
 describe('loadAgentGateConfig', () => {
   beforeEach(() => {
-    mkdirSync(TEST_DIR, { recursive: true })
+    vi.resetAllMocks()
+    vi.mocked(fs.existsSync).mockReturnValue(false)
   })
 
   afterEach(() => {
-    rmSync(TEST_DIR, { recursive: true, force: true })
     delete process.env.AGENT_GATE_DISABLED_RULES
   })
 
@@ -24,8 +33,11 @@ describe('loadAgentGateConfig', () => {
   })
 
   it('reads disabled_rules from .agent-gate.json and sets found: true', () => {
-    writeFileSync(
-      join(TEST_DIR, '.agent-gate.json'),
+    vi.mocked(fs.existsSync).mockImplementation((p) => {
+      if (typeof p === 'string' && p.endsWith('.agent-gate.json')) return true
+      return false
+    })
+    vi.mocked(fs.readFileSync).mockReturnValue(
       JSON.stringify({ disabled_rules: ['prevent-rm-rf-root'] })
     )
 
@@ -35,10 +47,14 @@ describe('loadAgentGateConfig', () => {
   })
 
   it('merges env var AGENT_GATE_DISABLED_RULES with file values', () => {
-    writeFileSync(
-      join(TEST_DIR, '.agent-gate.json'),
+    vi.mocked(fs.existsSync).mockImplementation((p) => {
+      if (typeof p === 'string' && p.endsWith('.agent-gate.json')) return true
+      return false
+    })
+    vi.mocked(fs.readFileSync).mockReturnValue(
       JSON.stringify({ disabled_rules: ['prevent-rm-rf-root'] })
     )
+
     process.env.AGENT_GATE_DISABLED_RULES =
       'prevent-force-push-main,prevent-system-path-write'
 
@@ -51,38 +67,57 @@ describe('loadAgentGateConfig', () => {
   })
 
   it('handles invalid JSON gracefully by returning empty config', () => {
-    writeFileSync(join(TEST_DIR, '.agent-gate.json'), '{ not json')
+    vi.mocked(fs.existsSync).mockImplementation((p) => {
+      if (typeof p === 'string' && p.endsWith('.agent-gate.json')) return true
+      return false
+    })
+    vi.mocked(fs.readFileSync).mockReturnValue('{ not json')
+
     const cfg = loadAgentGateConfig(TEST_DIR)
     expect(cfg.disabledRules).toEqual([])
   })
 
   it('reads protected_branches from config when present', () => {
-    writeFileSync(
-      join(TEST_DIR, '.agent-gate.json'),
+    vi.mocked(fs.existsSync).mockImplementation((p) => {
+      if (typeof p === 'string' && p.endsWith('.agent-gate.json')) return true
+      return false
+    })
+    vi.mocked(fs.readFileSync).mockReturnValue(
       JSON.stringify({ protected_branches: ['main', 'release/v1'] })
     )
+
     const cfg = loadAgentGateConfig(TEST_DIR)
     expect(cfg.protectedBranches).toEqual(['main', 'release/v1'])
   })
 
   it('reads extra_secret_paths from config when present', () => {
-    writeFileSync(
-      join(TEST_DIR, '.agent-gate.json'),
+    vi.mocked(fs.existsSync).mockImplementation((p) => {
+      if (typeof p === 'string' && p.endsWith('.agent-gate.json')) return true
+      return false
+    })
+    vi.mocked(fs.readFileSync).mockReturnValue(
       JSON.stringify({ extra_secret_paths: ['vault/', 'secrets/'] })
     )
+
     const cfg = loadAgentGateConfig(TEST_DIR)
     expect(cfg.extraSecretPathPrefixes).toEqual(['vault/', 'secrets/'])
   })
 
   it('walks upward to find .agent-gate.json in a parent directory', () => {
-    const sub = join(TEST_DIR, 'subproject')
-    mkdirSync(sub, { recursive: true })
-    writeFileSync(
-      join(TEST_DIR, '.agent-gate.json'),
-      JSON.stringify({ disabled_rules: ['prevent-rm-rf-root'] })
-    )
+    const parentPath = join(TEST_DIR, '.agent-gate.json')
+    const subDir = join(TEST_DIR, 'subproject')
 
-    const cfg = loadAgentGateConfig(sub)
+    // Only the parent dir's legacy JSON exists; the subDir has nothing.
+    vi.mocked(fs.existsSync).mockImplementation((p) => p === parentPath)
+    vi.mocked(fs.readFileSync).mockImplementation((p) => {
+      if (p === parentPath) {
+        return JSON.stringify({ disabled_rules: ['prevent-rm-rf-root'] })
+      }
+      throw new Error(`unexpected read: ${String(p)}`)
+    })
+
+    const cfg = loadAgentGateConfig(subDir)
     expect(cfg.disabledRules).toContain('prevent-rm-rf-root')
+    expect(cfg.found).toBe(true)
   })
 })
