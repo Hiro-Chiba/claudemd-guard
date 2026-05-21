@@ -43,6 +43,23 @@ hook payload → adapter → deterministic rules → AI validation → verdict
 
 If a deterministic rule fires, AI is skipped. Otherwise agent-gate reads all instruction files in the project tree and asks the AI to validate the operation against them.
 
+## What gets sent to the model
+
+When agent-gate reaches the AI validation step, the prompt sent to the model contains:
+
+- The full text of every instruction file collected by the rule loader (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.cursor/rules/*.mdc`, `.clinerules/*.md`, `.windsurf/rules/*.md`, `.github/copilot-instructions.md`, `CONVENTIONS.md`). No filtering or redaction is applied.
+- The tool name and tool input being validated. For `Bash` that is the literal command, for `Edit` / `Write` it is the file path and the proposed new content.
+
+Source files in the project (other than the instruction files above) are **not** read or sent. Operations blocked by a deterministic rule never reach the model at all.
+
+The endpoint depends on which model client is selected. The default fallback chain is `AgentSdkClient` (when `AGENT_GATE_USE_SDK=1`), then `AnthropicApi` (when `AGENT_GATE_API_KEY` is set), then `ClaudeCli` (always available as a final fallback).
+
+- `ClaudeCli` pipes the prompt to your local `claude` binary on stdin. It talks to Anthropic's API under your logged-in account.
+- `AnthropicApi` sends the prompt directly to Anthropic's API using `AGENT_GATE_API_KEY`.
+- `AgentSdkClient` sends the prompt through `@anthropic-ai/claude-agent-sdk`, reusing the host agent's existing Claude authentication. No separate API key is required.
+
+If your instruction files contain personal or proprietary content (names, email addresses, internal URLs, business strategy notes, and the like), that text leaves your machine every time an operation passes the deterministic baseline and reaches AI validation. Keep sensitive material out of instruction files if that is a concern. To halt all model calls entirely, set `AGENT_GATE_DISABLED=true`.
+
 ## Built-in safety rules
 
 Run by default, disable per-rule in `.agent-gate.json` if needed.
