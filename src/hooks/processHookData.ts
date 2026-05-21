@@ -366,7 +366,7 @@ export async function processHookData(
 
   // Get model client
   const getClient =
-    deps?.getModelClient ?? ((c: Config) => createModelClient(c, cwd))
+    deps?.getModelClient ?? ((c: Config) => createModelClient(c))
   const modelClient = getClient(config)
 
   // Validate
@@ -417,7 +417,7 @@ export async function processHookData(
   return result
 }
 
-function createModelClient(config: Config, cwd: string): IModelClient {
+function createModelClient(config: Config): IModelClient {
   // Build a fallback chain: the most-preferred client comes first.
   // The CompositeModelClient tries each in order; if one fails, the next
   // runs. The validator's outer try/catch fail-opens if every client has
@@ -435,7 +435,7 @@ function createModelClient(config: Config, cwd: string): IModelClient {
   if (config.useApi) {
     clients.push(new AnthropicApi(config))
   }
-  clients.push(new ClaudeCli(config, cwd))
+  clients.push(new ClaudeCli(config))
   if (clients.length === 1) {
     return clients[0]
   }

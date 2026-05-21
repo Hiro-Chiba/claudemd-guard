@@ -7,20 +7,28 @@ vi.mock('child_process', () => ({
 
 vi.mock('fs', () => ({
   existsSync: vi.fn(),
-  mkdirSync: vi.fn(),
+  mkdtempSync: vi.fn(),
+  rmSync: vi.fn(),
 }))
 
 vi.mock('os', () => ({
   homedir: vi.fn(() => '/home/testuser'),
+  tmpdir: vi.fn(() => '/tmp-mock'),
 }))
 
 import { execFileSync } from 'child_process'
-import { existsSync, mkdirSync } from 'fs'
-import { ClaudeCli } from '../../../src/validation/models/ClaudeCli'
+import { existsSync, mkdtempSync, rmSync } from 'fs'
+import {
+  ClaudeCli,
+  CLAUDE_TMP_PREFIX,
+} from '../../../src/validation/models/ClaudeCli'
 
 const mockedExecFileSync = vi.mocked(execFileSync)
 const mockedExistsSync = vi.mocked(existsSync)
-const mockedMkdirSync = vi.mocked(mkdirSync)
+const mockedMkdtempSync = vi.mocked(mkdtempSync)
+const mockedRmSync = vi.mocked(rmSync)
+
+const FAKE_CLAUDE_DIR = '/tmp-mock/agent-gate-claude-abc123'
 
 function makeSuccessResponse(text: string): string {
   return JSON.stringify({ result: text })
@@ -31,12 +39,13 @@ describe('ClaudeCli', () => {
     vi.clearAllMocks()
     mockedExecFileSync.mockReturnValue(makeSuccessResponse('ok'))
     mockedExistsSync.mockReturnValue(true)
+    mockedMkdtempSync.mockReturnValue(FAKE_CLAUDE_DIR)
   })
 
   describe('getClaudeBinary (via ask)', () => {
     it('uses PATH claude when useSystemClaude=true', async () => {
       const config = new Config({ useSystemClaude: true, model: 'claude-sonnet-4-6' })
-      const cli = new ClaudeCli(config, '/project')
+      const cli = new ClaudeCli(config)
 
       await cli.ask('hello')
 
@@ -52,7 +61,7 @@ describe('ClaudeCli', () => {
       })
 
       const config = new Config({ useSystemClaude: false, model: 'claude-sonnet-4-6' })
-      const cli = new ClaudeCli(config, '/project')
+      const cli = new ClaudeCli(config)
 
       await cli.ask('hello')
 
@@ -68,7 +77,7 @@ describe('ClaudeCli', () => {
       })
 
       const config = new Config({ useSystemClaude: false, model: 'claude-sonnet-4-6' })
-      const cli = new ClaudeCli(config, '/project')
+      const cli = new ClaudeCli(config)
 
       await cli.ask('hello')
 
@@ -80,7 +89,7 @@ describe('ClaudeCli', () => {
   describe('ask argument construction', () => {
     it('passes model from config', async () => {
       const config = new Config({ model: 'claude-opus-4-7', useSystemClaude: true })
-      const cli = new ClaudeCli(config, '/project')
+      const cli = new ClaudeCli(config)
 
       await cli.ask('prompt body')
 
@@ -92,7 +101,7 @@ describe('ClaudeCli', () => {
 
     it('includes stdin marker, output-format json, max-turns 1, disallowed tools, strict-mcp-config', async () => {
       const config = new Config({ useSystemClaude: true, model: 'claude-sonnet-4-6' })
-      const cli = new ClaudeCli(config, '/project')
+      const cli = new ClaudeCli(config)
 
       await cli.ask('prompt')
 
@@ -109,7 +118,7 @@ describe('ClaudeCli', () => {
 
     it('prepends SYSTEM_PROMPT to user prompt and passes via stdin input', async () => {
       const config = new Config({ useSystemClaude: true, model: 'claude-sonnet-4-6' })
-      const cli = new ClaudeCli(config, '/project')
+      const cli = new ClaudeCli(config)
 
       await cli.ask('USER_PROMPT_BODY')
 
@@ -120,44 +129,68 @@ describe('ClaudeCli', () => {
       expect(input).toMatch(/guardrail|enforcer/i)
     })
 
-    it('sets cwd to <projectCwd>/.claude', async () => {
+    it('sets cwd to a fresh tmpdir, never inside the user project', async () => {
       const config = new Config({ useSystemClaude: true, model: 'claude-sonnet-4-6' })
-      const cli = new ClaudeCli(config, '/my/project')
+      const cli = new ClaudeCli(config)
 
       await cli.ask('prompt')
 
       const [, , options] = mockedExecFileSync.mock.calls[0]
-      expect((options as { cwd: string }).cwd).toBe('/my/project/.claude')
+      const cwd = (options as { cwd: string }).cwd
+      expect(cwd).toBe(FAKE_CLAUDE_DIR)
+      // mkdtemp prefix must live under the OS tmpdir, not under the project.
+      expect(mockedMkdtempSync).toHaveBeenCalledWith(
+        `/tmp-mock/${CLAUDE_TMP_PREFIX}`
+      )
     })
   })
 
-  describe('.claude directory handling', () => {
-    it('creates .claude directory when missing', async () => {
-      mockedExistsSync.mockImplementation((p) => {
-        const path = typeof p === 'string' ? p : p.toString()
-        if (path.endsWith('/.claude')) return false
-        return true
-      })
-
+  describe('isolated tmpdir lifecycle', () => {
+    it('creates a unique tmpdir per call via mkdtempSync', async () => {
       const config = new Config({ useSystemClaude: true, model: 'claude-sonnet-4-6' })
-      const cli = new ClaudeCli(config, '/project')
+      const cli = new ClaudeCli(config)
 
       await cli.ask('prompt')
 
-      expect(mockedMkdirSync).toHaveBeenCalledWith('/project/.claude', {
+      expect(mockedMkdtempSync).toHaveBeenCalledTimes(1)
+    })
+
+    it('removes the tmpdir after a successful claude run', async () => {
+      const config = new Config({ useSystemClaude: true, model: 'claude-sonnet-4-6' })
+      const cli = new ClaudeCli(config)
+
+      await cli.ask('prompt')
+
+      expect(mockedRmSync).toHaveBeenCalledWith(FAKE_CLAUDE_DIR, {
         recursive: true,
+        force: true,
       })
     })
 
-    it('does not create .claude directory when it already exists', async () => {
-      mockedExistsSync.mockReturnValue(true)
+    it('removes the tmpdir even when claude throws', async () => {
+      mockedExecFileSync.mockImplementation(() => {
+        throw new Error('claude crashed')
+      })
 
       const config = new Config({ useSystemClaude: true, model: 'claude-sonnet-4-6' })
-      const cli = new ClaudeCli(config, '/project')
+      const cli = new ClaudeCli(config)
 
-      await cli.ask('prompt')
+      await expect(cli.ask('prompt')).rejects.toThrow('claude crashed')
+      expect(mockedRmSync).toHaveBeenCalledWith(FAKE_CLAUDE_DIR, {
+        recursive: true,
+        force: true,
+      })
+    })
 
-      expect(mockedMkdirSync).not.toHaveBeenCalled()
+    it('does not throw when tmpdir cleanup itself fails', async () => {
+      mockedRmSync.mockImplementation(() => {
+        throw new Error('rm denied')
+      })
+
+      const config = new Config({ useSystemClaude: true, model: 'claude-sonnet-4-6' })
+      const cli = new ClaudeCli(config)
+
+      await expect(cli.ask('prompt')).resolves.toBe('ok')
     })
   })
 
@@ -168,7 +201,7 @@ describe('ClaudeCli', () => {
       )
 
       const config = new Config({ useSystemClaude: true, model: 'claude-sonnet-4-6' })
-      const cli = new ClaudeCli(config, '/project')
+      const cli = new ClaudeCli(config)
 
       const result = await cli.ask('prompt')
 
