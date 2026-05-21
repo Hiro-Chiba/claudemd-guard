@@ -4,7 +4,12 @@ export interface CacheKey {
   adapter: string
   toolName: string
   toolInput: Record<string, unknown>
-  cwd: string
+  /**
+   * Stable project identifier (typically the closest dir with `.git`,
+   * `package.json`, or `.agent-gate.config.*`). Same key value across
+   * subdirectories of the same project so cache hits survive `cd`.
+   */
+  projectRoot: string
 }
 
 export interface DecisionCacheOptions {
@@ -25,9 +30,9 @@ interface Entry {
  * In-process LRU + TTL cache of agent-gate decisions.
  *
  * Most useful inside `agent-gate daemon` where the cache persists
- * across hook invocations. Same {adapter, toolName, toolInput, cwd}
- * within the TTL skips the entire pipeline (deterministic engine,
- * collector, AI call) and returns the prior verdict.
+ * across hook invocations. Same {adapter, toolName, toolInput,
+ * projectRoot} within the TTL skips the entire pipeline (deterministic
+ * engine, collector, AI call) and returns the prior verdict.
  */
 export class DecisionCache {
   private readonly ttlMs: number
@@ -45,7 +50,7 @@ export class DecisionCache {
     return JSON.stringify({
       a: key.adapter,
       t: key.toolName,
-      c: key.cwd,
+      p: key.projectRoot,
       i: canonicalize(key.toolInput),
     })
   }

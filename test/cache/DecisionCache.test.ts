@@ -5,8 +5,13 @@ import { ValidationResult } from '../../src/contracts/types/ValidationResult'
 const blocked: ValidationResult = { decision: 'block', reason: 'nope' }
 const allowed: ValidationResult = { decision: undefined, reason: '' }
 
-function key(adapter: string, toolName: string, input: Record<string, unknown>, cwd: string) {
-  return { adapter, toolName, toolInput: input, cwd }
+function key(
+  adapter: string,
+  toolName: string,
+  input: Record<string, unknown>,
+  projectRoot: string
+) {
+  return { adapter, toolName, toolInput: input, projectRoot }
 }
 
 describe('DecisionCache', () => {
@@ -23,7 +28,7 @@ describe('DecisionCache', () => {
     expect(hit).toEqual(blocked)
   })
 
-  it('treats different cwd as different keys', () => {
+  it('treats different projectRoot as different keys', () => {
     const cache = new DecisionCache({ ttlSec: 60, maxEntries: 10 })
     cache.set(key('a', 'Bash', { command: 'ls' }, '/p1'), allowed)
     expect(cache.get(key('a', 'Bash', { command: 'ls' }, '/p2'))).toBeNull()

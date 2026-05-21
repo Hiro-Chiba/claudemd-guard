@@ -6,6 +6,7 @@ import { ValidationResult } from '../contracts/types/ValidationResult'
 import { RuleSource } from '../contracts/types/RuleSource'
 import { IModelClient } from '../contracts/types/ModelClient'
 import { collectRuleSources } from '../collector/collectRuleSources'
+import { findProjectRoot } from '../config/findProjectRoot'
 import { validator } from '../validation/validator'
 import { Config } from '../config/Config'
 import { ClaudeCli } from '../validation/models/ClaudeCli'
@@ -251,14 +252,20 @@ export async function processHookData(
   // Resolve cwd early so the agent-gate config can be loaded relative to it.
   const cwd = deps?.cwd ?? process.cwd()
 
+  // Stable project identifier used as the key for project-scoped state
+  // (cache, cooldown, no-config warning throttle, sessionContext). Falls
+  // back to cwd when no marker is found so synthetic paths in tests and
+  // ad-hoc directories still work.
+  const projectRoot = findProjectRoot(cwd) ?? cwd
+
   // Cache lookup: if a recent verdict for the exact same (adapter, tool,
-  // input, cwd) is still valid, return it without re-running the pipeline.
+  // input, projectRoot) is still valid, return it without re-running.
   if (deps?.cache) {
     const cached = deps.cache.get({
       adapter: adapter.id,
       toolName,
       toolInput,
-      cwd,
+      projectRoot,
     })
     if (cached) return cached
   }
@@ -268,12 +275,13 @@ export async function processHookData(
   // Strict Opt-in: skip everything if no config file was found.
   if (agentGateConfig.found !== true) {
     const warner = deps?.noConfigWarner ?? NOOP_NO_CONFIG_WARNER
-    warner.warn(cwd)
+    warner.warn(projectRoot)
     return PASS
   }
 
-  // Build SessionContext (history from adapter, projectRoot defaults to cwd
-  // for v1; future work can detect the actual project root).
+  // Build SessionContext. `cwd` keeps the actual working directory the
+  // adapter received (used for transcript discovery in readHistory).
+  // `projectRoot` is the stable identifier resolved above.
   let history: SessionEvent[] = []
   if (typeof adapter.readHistory === 'function') {
     try {
@@ -289,7 +297,7 @@ export async function processHookData(
   }
   const sessionContext: SessionContext = {
     cwd,
-    projectRoot: cwd,
+    projectRoot,
     history,
   }
 
@@ -329,7 +337,7 @@ export async function processHookData(
     }
     if (deps?.cache) {
       deps.cache.set(
-        { adapter: adapter.id, toolName, toolInput, cwd },
+        { adapter: adapter.id, toolName, toolInput, projectRoot },
         verdict
       )
     }
@@ -344,7 +352,7 @@ export async function processHookData(
 
   if (cooldownStore && config.cooldown > 0) {
     const now = Math.floor(Date.now() / 1000)
-    const lastTime = cooldownStore.getLastTime(cwd)
+    const lastTime = cooldownStore.getLastTime(projectRoot)
     if (now - lastTime < config.cooldown) {
       return PASS
     }
@@ -357,7 +365,7 @@ export async function processHookData(
   if (rules.length === 0) {
     if (deps?.cache) {
       deps.cache.set(
-        { adapter: adapter.id, toolName, toolInput, cwd },
+        { adapter: adapter.id, toolName, toolInput, projectRoot },
         PASS
       )
     }
@@ -385,7 +393,7 @@ export async function processHookData(
 
   // Update cooldown timestamp AFTER successful validation
   if (cooldownStore) {
-    cooldownStore.setLastTime(cwd, Math.floor(Date.now() / 1000))
+    cooldownStore.setLastTime(projectRoot, Math.floor(Date.now() / 1000))
   }
 
   const decision: 'block' | 'allow' =
@@ -409,7 +417,7 @@ export async function processHookData(
   })
   if (deps?.cache) {
     deps.cache.set(
-      { adapter: adapter.id, toolName, toolInput, cwd },
+      { adapter: adapter.id, toolName, toolInput, projectRoot },
       result
     )
   }
