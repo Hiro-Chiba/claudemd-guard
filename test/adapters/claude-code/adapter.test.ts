@@ -67,4 +67,57 @@ describe('claudeCodeAdapter', () => {
   it('exposes id "claude-code"', () => {
     expect(claudeCodeAdapter.id).toBe('claude-code')
   })
+
+  describe('matches', () => {
+    it('matches PreToolUse', () => {
+      expect(
+        claudeCodeAdapter.matches({ hook_event_name: 'PreToolUse' })
+      ).toBe(true)
+    })
+
+    it('matches PostToolUse', () => {
+      expect(
+        claudeCodeAdapter.matches({ hook_event_name: 'PostToolUse' })
+      ).toBe(true)
+    })
+
+    it('matches non-prefix events like Notification, Stop, UserPromptSubmit', () => {
+      for (const event of [
+        'Notification',
+        'Stop',
+        'SubagentStop',
+        'UserPromptSubmit',
+        'SessionStart',
+        'SessionEnd',
+      ]) {
+        expect(claudeCodeAdapter.matches({ hook_event_name: event })).toBe(
+          true
+        )
+      }
+    })
+
+    it('does not match Gemini CLI BeforeTool', () => {
+      expect(
+        claudeCodeAdapter.matches({ hook_event_name: 'BeforeTool' })
+      ).toBe(false)
+    })
+
+    it('does not match Cursor camelCase events', () => {
+      expect(
+        claudeCodeAdapter.matches({
+          hook_event_name: 'beforeShellExecution',
+        })
+      ).toBe(false)
+    })
+
+    it('does not match non-object payloads', () => {
+      expect(claudeCodeAdapter.matches(null)).toBe(false)
+      expect(claudeCodeAdapter.matches('string')).toBe(false)
+      expect(claudeCodeAdapter.matches(42)).toBe(false)
+    })
+
+    it('does not match when hook_event_name is missing', () => {
+      expect(claudeCodeAdapter.matches({})).toBe(false)
+    })
+  })
 })

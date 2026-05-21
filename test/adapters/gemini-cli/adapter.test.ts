@@ -168,4 +168,35 @@ describe('geminiCliAdapter', () => {
       expect(history[1].kind).toBe('assistant-message')
     })
   })
+
+  describe('matches', () => {
+    it('matches BeforeTool', () => {
+      expect(
+        geminiCliAdapter.matches({ hook_event_name: 'BeforeTool' })
+      ).toBe(true)
+    })
+
+    it('matches AfterTool so formatting stays Gemini-shaped on post-events', () => {
+      expect(
+        geminiCliAdapter.matches({ hook_event_name: 'AfterTool' })
+      ).toBe(true)
+    })
+
+    it('does not match Claude Code PreToolUse', () => {
+      expect(
+        geminiCliAdapter.matches({ hook_event_name: 'PreToolUse' })
+      ).toBe(false)
+    })
+
+    it('does not match Cursor camelCase events', () => {
+      expect(
+        geminiCliAdapter.matches({ hook_event_name: 'beforeShellExecution' })
+      ).toBe(false)
+    })
+
+    it('does not match non-object payloads or missing hook_event_name', () => {
+      expect(geminiCliAdapter.matches(null)).toBe(false)
+      expect(geminiCliAdapter.matches({})).toBe(false)
+    })
+  })
 })

@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { parseArgs } from '../../src/cli/agent-gate'
 
 describe('parseArgs', () => {
-  it('defaults agentId to claude-code when no --agent given', () => {
+  it('leaves agentId undefined when no --agent given (auto-detect)', () => {
     const r = parseArgs([])
-    expect(r.agentId).toBe('claude-code')
+    expect(r.agentId).toBeUndefined()
   })
 
   it('accepts --agent <id> form', () => {

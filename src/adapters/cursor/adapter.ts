@@ -28,6 +28,13 @@ function isObject(v: unknown): v is Record<string, unknown> {
 export const cursorAdapter: Adapter = {
   id: 'cursor',
 
+  matches(raw: unknown): boolean {
+    if (!isObject(raw)) return false
+    const event = raw['hook_event_name']
+    // Cursor uses camelCase names like beforeShellExecution, afterFileEdit.
+    return typeof event === 'string' && /^(before|after)[A-Z]/.test(event)
+  },
+
   parseHook(stdinJson: string): ParsedHook {
     let raw: unknown
     try {

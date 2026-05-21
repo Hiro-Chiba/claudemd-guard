@@ -7,8 +7,29 @@ import { readClaudeCodeTranscript } from './transcript'
 
 const HOOK_EVENT_PRE_TOOL_USE = 'PreToolUse'
 
+// Claude Code event names besides Pre*/Post* prefixes that we still
+// want to claim as ours during auto-detection so response formatting is
+// vendor-correct even when no action is produced.
+const CLAUDE_CODE_EVENT_NAMES = new Set([
+  'Notification',
+  'Stop',
+  'SubagentStop',
+  'UserPromptSubmit',
+  'SessionStart',
+  'SessionEnd',
+])
+
 export const claudeCodeAdapter: Adapter = {
   id: 'claude-code',
+
+  matches(raw: unknown): boolean {
+    if (typeof raw !== 'object' || raw === null) return false
+    const event = (raw as Record<string, unknown>)['hook_event_name']
+    if (typeof event !== 'string') return false
+    // PreToolUse, PostToolUse, PreCompact, etc.
+    if (/^(Pre|Post)[A-Z]/.test(event)) return true
+    return CLAUDE_CODE_EVENT_NAMES.has(event)
+  },
 
   parseHook(stdinJson: string): ParsedHook {
     let raw: unknown

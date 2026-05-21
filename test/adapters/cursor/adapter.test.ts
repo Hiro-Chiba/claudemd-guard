@@ -98,4 +98,39 @@ describe('cursorAdapter', () => {
   it('exposes id "cursor"', () => {
     expect(cursorAdapter.id).toBe('cursor')
   })
+
+  describe('matches', () => {
+    it('matches the documented camelCase pre-events', () => {
+      for (const event of [
+        'beforeShellExecution',
+        'beforeReadFile',
+        'beforeFileEdit',
+      ]) {
+        expect(cursorAdapter.matches({ hook_event_name: event })).toBe(true)
+      }
+    })
+
+    it('matches camelCase post-events (afterFileEdit) so formatting stays Cursor-shaped', () => {
+      expect(
+        cursorAdapter.matches({ hook_event_name: 'afterFileEdit' })
+      ).toBe(true)
+    })
+
+    it('does not match Claude Code PascalCase events', () => {
+      expect(cursorAdapter.matches({ hook_event_name: 'PreToolUse' })).toBe(
+        false
+      )
+    })
+
+    it('does not match Gemini CLI BeforeTool', () => {
+      expect(cursorAdapter.matches({ hook_event_name: 'BeforeTool' })).toBe(
+        false
+      )
+    })
+
+    it('does not match non-object payloads', () => {
+      expect(cursorAdapter.matches(null)).toBe(false)
+      expect(cursorAdapter.matches([])).toBe(false)
+    })
+  })
 })

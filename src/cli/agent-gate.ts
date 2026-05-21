@@ -15,7 +15,8 @@ import {
 import {
   getAdapter,
   availableAdapterIds,
-  DEFAULT_ADAPTER_ID,
+  detectAdapter,
+  claudeCodeAdapter,
 } from '../adapters'
 import { Adapter } from '../adapters/Adapter'
 import { DaemonServer } from '../daemon/server'
@@ -26,15 +27,15 @@ import { DecisionCache } from '../cache/DecisionCache'
 const HELP_TEXT = `agent-gate — runtime enforcer for AI coding agent rules
 
 Usage:
-  agent-gate                        Run as a hook (reads JSON from stdin)
-  agent-gate --agent <id>           Use the named adapter (default: claude-code)
+  agent-gate                        Run as a hook (reads JSON from stdin; auto-detects vendor)
+  agent-gate --agent <id>           Force a specific adapter (override auto-detect)
   agent-gate install                Register the hook in ~/.claude/settings.json
   agent-gate uninstall              Remove the hook from ~/.claude/settings.json
   agent-gate daemon                 Start the long-lived daemon (Unix socket)
   agent-gate --help                 Show this help
   agent-gate --version              Show version
 
-Adapters (use with --agent):
+Adapters (auto-detected from the stdin payload; use --agent to force):
   ${availableAdapterIds().join(', ')}
 
 Environment:
@@ -66,7 +67,17 @@ export async function run(
   })
 }
 
-function runHookMode(adapter: Adapter): void {
+function detectAdapterFromJson(input: string): Adapter {
+  let raw: unknown = null
+  try {
+    raw = JSON.parse(input)
+  } catch {
+    // leave raw as null; detectAdapter falls back to claudeCodeAdapter
+  }
+  return detectAdapter(raw)
+}
+
+function runHookMode(explicitAdapter?: Adapter): void {
   let inputData = ''
   process.stdin.setEncoding('utf8')
 
@@ -75,6 +86,7 @@ function runHookMode(adapter: Adapter): void {
   })
 
   process.stdin.on('end', async () => {
+    const adapter = explicitAdapter ?? detectAdapterFromJson(inputData)
     try {
       if (process.env.AGENT_GATE_DAEMON === '1') {
         const socketPath =
@@ -194,13 +206,14 @@ function printVersion(): void {
 
 interface ParsedArgs {
   positional: string[]
-  agentId: string
+  /** Explicit adapter id from --agent. `undefined` means auto-detect. */
+  agentId: string | undefined
   showHelp: boolean
   showVersion: boolean
 }
 
 export function parseArgs(args: string[]): ParsedArgs {
-  let agentId = DEFAULT_ADAPTER_ID
+  let agentId: string | undefined = undefined
   let showHelp = false
   let showVersion = false
   const positional: string[] = []
@@ -251,23 +264,33 @@ function main(): void {
       return
     }
 
-    const adapter = getAdapter(parsedArgs.agentId)
-    if (!adapter) {
-      if (isHookMode) {
-        // Fallback for unknown adapter in hook mode
-        console.log(JSON.stringify({ decision: 'allow', reason: `Unknown adapter: ${parsedArgs.agentId}` }))
-        process.exit(0)
+    // When --agent is omitted the adapter is auto-detected from the
+    // stdin payload inside runHookMode. When provided, we resolve the
+    // explicit override here so unknown ids fail fast.
+    let explicitAdapter: Adapter | undefined = undefined
+    if (parsedArgs.agentId !== undefined) {
+      explicitAdapter = getAdapter(parsedArgs.agentId)
+      if (!explicitAdapter) {
+        if (isHookMode) {
+          console.log(
+            JSON.stringify({
+              decision: 'allow',
+              reason: `Unknown adapter: ${parsedArgs.agentId}`,
+            })
+          )
+          process.exit(0)
+        }
+        console.error(
+          `Unknown adapter: ${parsedArgs.agentId}. Available: ${availableAdapterIds().join(', ')}`
+        )
+        process.exit(1)
       }
-      console.error(
-        `Unknown adapter: ${parsedArgs.agentId}. Available: ${availableAdapterIds().join(', ')}`
-      )
-      process.exit(1)
     }
 
     const subcommand = parsedArgs.positional[0]
     switch (subcommand) {
       case undefined:
-        runHookMode(adapter)
+        runHookMode(explicitAdapter)
         return
       case 'install':
         runInstall()
@@ -296,17 +319,25 @@ function main(): void {
  * Ensures that hook mode always exits cleanly with a valid response,
  * even if a fatal crash occurs during startup.
  */
-function handleHookError(error: unknown, agentId: string): void {
+function handleHookError(error: unknown, agentId: string | undefined): void {
   const message = error instanceof Error ? error.message : String(error)
   console.error('Fatal agent-gate error:', error)
 
-  // Try to use the adapter's formatter if possible, otherwise fallback to raw JSON
-  const adapter = getAdapter(agentId)
+  // Try the explicit adapter when one was specified; otherwise fall back
+  // to Claude Code's formatter which most vendors tolerate as allow.
+  const adapter =
+    agentId !== undefined ? getAdapter(agentId) : claudeCodeAdapter
   if (adapter) {
-    console.log(adapter.formatResponse({ decision: undefined, reason: `Fatal error: ${message}` }))
+    console.log(
+      adapter.formatResponse({
+        decision: undefined,
+        reason: `Fatal error: ${message}`,
+      })
+    )
   } else {
-    // Gemini CLI and most others accept this shape
-    console.log(JSON.stringify({ decision: 'allow', reason: `Fatal error: ${message}` }))
+    console.log(
+      JSON.stringify({ decision: 'allow', reason: `Fatal error: ${message}` })
+    )
   }
   process.exit(0)
 }

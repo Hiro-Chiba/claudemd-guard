@@ -10,6 +10,14 @@ const HOOK_EVENT_BEFORE_TOOL = 'BeforeTool'
 export const geminiCliAdapter: Adapter = {
   id: 'gemini-cli',
 
+  matches(raw: unknown): boolean {
+    if (typeof raw !== 'object' || raw === null) return false
+    const event = (raw as Record<string, unknown>)['hook_event_name']
+    // Gemini CLI uses PascalCase Before*/After* (BeforeTool, AfterTool).
+    // Disjoint from Claude Code's Pre*/Post* and Cursor's camelCase.
+    return typeof event === 'string' && /^(Before|After)[A-Z]/.test(event)
+  },
+
   parseHook(stdinJson: string): ParsedHook {
     let raw: unknown
     try {

@@ -25,6 +25,16 @@ export interface Adapter {
   /** Identifier used for CLI dispatch and logging. */
   readonly id: string
 
+  /**
+   * Returns true iff the parsed stdin payload (already JSON.parse'd, so
+   * `unknown`) is recognizably from this vendor. Used by auto-detection
+   * to route an incoming hook payload to the right adapter without
+   * requiring `--agent <id>`. Must work for both action and post-event
+   * payloads so response formatting stays vendor-correct even when no
+   * action is produced.
+   */
+  matches(rawPayload: unknown): boolean
+
   /** Parse stdin JSON into a normalized ParsedHook. */
   parseHook(stdinJson: string): ParsedHook
 

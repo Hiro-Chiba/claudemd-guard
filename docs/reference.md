@@ -11,9 +11,7 @@ agent-gate install
 
 This registers a `PreToolUse` hook in `~/.claude/settings.json`. Restart Claude Code to activate. Remove with `agent-gate uninstall`.
 
-Gemini CLI: point your hook config at `agent-gate --agent gemini-cli`.
-
-Cursor 1.7: point your hook config at `agent-gate --agent cursor` (beta).
+For Gemini CLI or Cursor 1.7 (beta), point your hook config at the bare `agent-gate` command. The vendor is auto-detected from the stdin payload (Claude Code's `PreToolUse`, Gemini CLI's `BeforeTool`, and Cursor's `beforeShellExecution` / `beforeReadFile` / `beforeFileEdit` have disjoint event names). Pass `--agent claude-code` / `--agent gemini-cli` / `--agent cursor` only when you want to force a specific adapter, for testing or to bypass detection on a custom payload.
 
 ## CLI
 
@@ -21,7 +19,8 @@ Cursor 1.7: point your hook config at `agent-gate --agent cursor` (beta).
 |---|---|
 | `agent-gate install` / `uninstall` | Register or remove the Claude Code hook |
 | `agent-gate daemon` | Long-lived Unix-socket server; pair with `AGENT_GATE_DAEMON=1` |
-| `agent-gate` | Run as a hook (reads stdin; called internally) |
+| `agent-gate` | Run as a hook (reads stdin; vendor auto-detected) |
+| `agent-gate --agent <id>` | Force the named adapter instead of auto-detecting |
 
 ## Environment variables
 
